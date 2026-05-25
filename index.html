@@ -5,60 +5,96 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>影像靈感資料庫</title>
 <style>
-  :root { color-scheme: light; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f2f2f7;color:#1c1c1e;min-height:100vh}
 
-  header { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 100; }
-  header h1 { font-size: 17px; font-weight: 700; }
-  header h1 span { color: #999; font-weight: 400; font-size: 13px; margin-left: 8px; }
-  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .search-box { padding: 7px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; width: 190px; outline: none; }
-  .search-box:focus { border-color: #007aff; }
-  .filter-btn { padding: 5px 12px; border: 1px solid #ddd; border-radius: 20px; background: #fff; font-size: 12px; cursor: pointer; }
-  .filter-btn.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
-  .last-sync { font-size: 11px; color: #bbb; }
+/* ── Header ── */
+header{background:#fff;border-bottom:1px solid #e5e5ea;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:200}
+.logo{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.logo span{font-weight:400;font-size:13px;color:#8e8e93}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.search-box{padding:7px 14px 7px 32px;border:1px solid #e5e5ea;border-radius:10px;font-size:13px;width:200px;outline:none;background:#f2f2f7 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center}
+.search-box:focus{border-color:#007aff;background-color:#fff}
+.filter-btn{padding:5px 14px;border:1.5px solid #e5e5ea;border-radius:20px;background:#fff;font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}
+.filter-btn.active{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
+.last-sync{font-size:11px;color:#c7c7cc}
 
-  main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+/* ── Grid ── */
+main{padding:20px 24px;max-width:1440px;margin:0 auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 
-  .card { background: #fff; border-radius: 14px; overflow: hidden; border: 1px solid #e8e8e8; transition: box-shadow 0.2s, transform 0.2s; }
-  .card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.09); transform: translateY(-2px); }
-  .card-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
-  .card-thumb-placeholder { width: 100%; aspect-ratio: 16/9; background: linear-gradient(135deg,#e8e8e8,#d0d0d0); display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 13px; }
-  .card-body { padding: 13px 15px 15px; }
-  .card-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; flex-wrap: wrap; }
-  .platform-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; }
-  .platform-youtube { background: #ffecec; color: #cc0000; }
-  .platform-vimeo { background: #e8f0ff; color: #1a5aff; }
-  .platform-instagram { background: #fce8f5; color: #c13584; }
-  .platform-tiktok { background: #e8faf8; color: #333; }
-  .platform-threads { background: #f0f0f0; color: #333; }
-  .platform-other { background: #f0f0f0; color: #555; }
-  .cat-badge { font-size: 11px; background: #f0f0f0; color: #555; padding: 2px 7px; border-radius: 20px; }
-  .card-duration { font-size: 11px; color: #aaa; margin-left: auto; }
-  .card-title { font-size: 14px; font-weight: 600; line-height: 1.4; margin-bottom: 3px; }
-  .card-title a { color: inherit; text-decoration: none; }
-  .card-title a:hover { color: #007aff; }
-  .card-creator { font-size: 12px; color: #999; margin-bottom: 10px; }
-  .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
-  .analysis-block { background: #f7f7f7; border-radius: 8px; padding: 7px 9px; }
-  .analysis-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #bbb; margin-bottom: 3px; }
-  .analysis-text { font-size: 11.5px; color: #444; line-height: 1.5; }
-  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-  .tag { font-size: 11px; background: #f0f0f0; color: #555; padding: 2px 7px; border-radius: 20px; cursor: pointer; }
-  .tag:hover { background: #e0e0e0; }
-  .notes-block { padding: 8px 10px; background: #fffbea; border-radius: 7px; font-size: 11.5px; color: #664d00; line-height: 1.5; margin-bottom: 8px; }
-  .card-actions { display: flex; gap: 5px; padding-top: 9px; border-top: 1px solid #f0f0f0; }
-  .action-btn { flex: 1; padding: 5px; border: 1px solid #e8e8e8; border-radius: 6px; background: #fff; font-size: 11px; color: #666; cursor: pointer; text-align: center; }
-  .action-btn:hover { background: #f5f5f5; }
-  .empty-state { text-align: center; padding: 60px 20px; color: #bbb; grid-column: 1/-1; }
-  .loading { text-align: center; padding: 60px; color: #bbb; grid-column: 1/-1; font-size: 14px; }
+/* ── Card ── */
+.card{background:#fff;border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s;border:1px solid rgba(0,0,0,.06)}
+.card:hover{transform:translateY(-3px);box-shadow:0 10px 36px rgba(0,0,0,.11)}
+.card-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#e5e5ea}
+.card-thumb-ph{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,#e5e5ea,#d1d1d6);display:flex;align-items:center;justify-content:center;color:#aeaeb2;font-size:13px}
+.card-body{padding:12px 14px 14px}
+.card-meta{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase}
+.p-youtube{background:#ffecec;color:#cc0000}
+.p-vimeo{background:#e8f0ff;color:#1a5aff}
+.p-instagram{background:#fce8f5;color:#c13584}
+.p-tiktok{background:#e8faf8;color:#333}
+.p-threads{background:#f0f0f0;color:#333}
+.p-other{background:#f0f0f0;color:#555}
+.cat-badge{font-size:11px;background:#f2f2f7;color:#636366;padding:2px 8px;border-radius:20px}
+.dur{font-size:11px;color:#aeaeb2;margin-left:auto}
+.card-title{font-size:14px;font-weight:600;line-height:1.4;margin-bottom:3px}
+.card-creator{font-size:12px;color:#8e8e93;margin-bottom:9px}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:11px;background:#f2f2f7;color:#636366;padding:2px 9px;border-radius:20px;cursor:pointer;transition:background .15s}
+.tag:hover{background:#e5e5ea}
+
+/* ── Modal overlay ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:22px;width:100%;max-width:820px;margin:auto;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.25)}
+
+/* modal header */
+.modal-hd{padding:22px 24px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.modal-hd-info{flex:1;min-width:0}
+.modal-meta-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.modal-title{font-size:18px;font-weight:700;line-height:1.35}
+.modal-creator{font-size:13px;color:#8e8e93;margin-top:4px}
+.modal-close{width:30px;height:30px;border-radius:50%;background:#f2f2f7;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#636366;transition:background .15s}
+.modal-close:hover{background:#e5e5ea}
+
+/* frame grid */
+.frames-section{margin:18px 24px 0}
+.frames-label{font-size:11px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.frames-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.frame-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:#e5e5ea}
+
+/* analysis */
+.analysis-section{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 24px 0}
+.ab{background:#f2f2f7;border-radius:12px;padding:12px 14px}
+.ab-label{font-size:10px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.ab-text{font-size:13px;color:#3a3a3c;line-height:1.65}
+
+/* notes */
+.notes-section{margin:14px 24px 0;background:#fffbea;border-radius:12px;padding:12px 14px;font-size:13px;color:#664d00;line-height:1.6}
+
+/* modal footer */
+.modal-ft{margin:18px 24px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.modal-tags{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.watch-btn{display:inline-flex;align-items:center;gap:6px;background:#1c1c1e;color:#fff;padding:9px 20px;border-radius:22px;text-decoration:none;font-size:13px;font-weight:600;flex-shrink:0;transition:opacity .15s}
+.watch-btn:hover{opacity:.8}
+
+/* responsive */
+@media(max-width:600px){
+  .frames-grid{grid-template-columns:repeat(3,1fr)}
+  .analysis-section{grid-template-columns:1fr}
+  .modal-hd{padding:16px 16px 0}
+  .frames-section,.analysis-section,.notes-section{margin-left:16px;margin-right:16px}
+  .modal-ft{margin:14px 16px 18px}
+}
+
+.empty-state,.loading{text-align:center;padding:60px 20px;color:#aeaeb2;grid-column:1/-1;font-size:14px}
 </style>
 </head>
 <body>
 <header>
-  <h1>🎬 影像靈感資料庫 <span id="countBadge"></span></h1>
+  <div class="logo">🎬 影像靈感資料庫 <span id="countBadge"></span></div>
   <div class="controls">
     <input class="search-box" id="searchInput" type="text" placeholder="搜尋標題、標籤、手法…">
     <button class="filter-btn active" onclick="setFilter('all',this)">全部</button>
@@ -66,80 +102,170 @@
     <button class="filter-btn" onclick="setFilter('MV',this)">MV</button>
     <button class="filter-btn" onclick="setFilter('紀錄',this)">紀錄</button>
     <button class="filter-btn" onclick="setFilter('短片',this)">短片</button>
+    <button class="filter-btn" onclick="setFilter('婚攝',this)">婚攝</button>
     <span class="last-sync" id="lastSync"></span>
   </div>
 </header>
 <main><div class="grid" id="grid"><div class="loading">載入中…</div></div></main>
+
+<!-- ── Modal ── -->
+<div class="modal-overlay" id="overlay" onclick="handleOverlay(event)">
+  <div class="modal" id="modal">
+    <div class="modal-hd">
+      <div class="modal-hd-info">
+        <div class="modal-meta-row" id="mMeta"></div>
+        <div class="modal-title" id="mTitle"></div>
+        <div class="modal-creator" id="mCreator"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="frames-section" id="mFramesSec" style="display:none">
+      <div class="frames-label">影片畫格</div>
+      <div class="frames-grid" id="mFrames"></div>
+    </div>
+
+    <div class="analysis-section" id="mAnalysis"></div>
+
+    <div class="notes-section" id="mNotes" style="display:none"></div>
+
+    <div class="modal-ft">
+      <div class="modal-tags" id="mTags"></div>
+      <a class="watch-btn" id="mWatch" href="#" target="_blank">▶ 觀看原片</a>
+    </div>
+  </div>
+</div>
+
 <script>
-let db = [];
-let currentFilter = 'all';
-let currentSearch = '';
+let db=[];
+let currentFilter='all';
+let currentSearch='';
 
-// 從同一個 repo 的 data.json 讀取資料
-const DATA_URL = 'data.json';
-
-fetch(DATA_URL + '?t=' + Date.now())
-  .then(r => r.json())
-  .then(data => {
-    db = data.entries || [];
-    document.getElementById('lastSync').textContent = '最後更新：' + (data.lastUpdated || '');
+fetch('data.json?t='+Date.now())
+  .then(r=>r.json())
+  .then(data=>{
+    db=data.entries||[];
+    document.getElementById('lastSync').textContent='最後更新：'+(data.lastUpdated||'');
     render();
   })
-  .catch(() => {
-    document.getElementById('grid').innerHTML = '<div class="empty-state"><p>無法載入資料</p></div>';
+  .catch(()=>{
+    document.getElementById('grid').innerHTML='<div class="empty-state">無法載入資料</div>';
   });
 
-function platformLabel(p) {
-  return {youtube:'YouTube',vimeo:'Vimeo',instagram:'IG',tiktok:'TikTok',threads:'Threads',other:'其他'}[p]||p;
-}
-function setFilter(f,btn) {
+const PLABEL={youtube:'YouTube',vimeo:'Vimeo',instagram:'IG',tiktok:'TikTok',threads:'Threads',other:'其他'};
+const PCLS={youtube:'p-youtube',vimeo:'p-vimeo',instagram:'p-instagram',tiktok:'p-tiktok',threads:'p-threads',other:'p-other'};
+
+function plabel(p){return PLABEL[p]||p}
+function pcls(p){return PCLS[p]||'p-other'}
+
+function setFilter(f,btn){
   currentFilter=f;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   render();
 }
-function getFiltered() {
+
+function getFiltered(){
   return db.filter(e=>{
     const mF=currentFilter==='all'||e.category===currentFilter||(e.tags||[]).includes(currentFilter);
     const q=currentSearch.toLowerCase();
-    const mS=!q||e.title.toLowerCase().includes(q)||(e.creator||'').toLowerCase().includes(q)||(e.tags||[]).some(t=>t.toLowerCase().includes(q))||Object.values(e.analysis||{}).some(v=>v.toLowerCase().includes(q))||(e.notes||'').toLowerCase().includes(q);
+    const mS=!q||[e.title,e.creator||'',...(e.tags||[]),...Object.values(e.analysis||{})].join(' ').toLowerCase().includes(q);
     return mF&&mS;
   });
 }
-function renderCard(e) {
+
+function renderCard(e){
   const thumb=e.thumbnail
-    ?`<a href="${e.url}" target="_blank"><img class="card-thumb" src="${e.thumbnail}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"></a><a href="${e.url}" target="_blank"><div class="card-thumb-placeholder" style="display:none">無縮圖</div></a>`
-    :`<a href="${e.url}" target="_blank"><div class="card-thumb-placeholder">無縮圖</div></a>`;
-  return `<div class="card">${thumb}<div class="card-body">
-    <div class="card-meta">
-      <span class="platform-badge platform-${e.platform}">${platformLabel(e.platform)}</span>
-      ${e.category?`<span class="cat-badge">${e.category}</span>`:''}
-      ${e.duration?`<span class="card-duration">${e.duration}</span>`:''}
+    ?`<img class="card-thumb" src="${e.thumbnail}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
+    :`<div class="card-thumb-ph">無縮圖</div>`;
+  const tags=(e.tags||[]).slice(0,5).map(t=>`<span class="tag" onclick="event.stopPropagation();filterByTag('${t}')">${t}</span>`).join('');
+  return `<div class="card" onclick="openModal('${e.id}')">
+    ${thumb}
+    <div class="card-body">
+      <div class="card-meta">
+        <span class="badge ${pcls(e.platform)}">${plabel(e.platform)}</span>
+        ${e.category?`<span class="cat-badge">${e.category}</span>`:''}
+        ${e.duration?`<span class="dur">${e.duration}</span>`:''}
+      </div>
+      <div class="card-title">${e.title}</div>
+      ${e.creator?`<div class="card-creator">${e.creator}${e.year?' · '+e.year:''}</div>`:''}
+      <div class="tags">${tags}</div>
     </div>
-    <div class="card-title"><a href="${e.url}" target="_blank">${e.title}</a></div>
-    ${e.creator?`<div class="card-creator">${e.creator}${e.year?' · '+e.year:''}</div>`:''}
-    <div class="analysis-grid">
-      <div class="analysis-block"><div class="analysis-label">🎨 風格色調</div><div class="analysis-text">${e.analysis?.style||''}</div></div>
-      <div class="analysis-block"><div class="analysis-label">🎥 運鏡畫面</div><div class="analysis-text">${e.analysis?.camera||''}</div></div>
-      <div class="analysis-block"><div class="analysis-label">✂️ 剪輯節奏</div><div class="analysis-text">${e.analysis?.edit||''}</div></div>
-      <div class="analysis-block"><div class="analysis-label">🎵 音樂音效</div><div class="analysis-text">${e.analysis?.music||''}</div></div>
-    </div>
-    <div class="tags">${(e.tags||[]).map(t=>`<span class="tag" onclick="filterByTag('${t}')">${t}</span>`).join('')}</div>
-    ${e.notes?`<div class="notes-block">💡 ${e.notes}</div>`:''}
-    <div class="card-actions"><button class="action-btn" onclick="window.open('${e.url}','_blank')">▶ 觀看</button></div>
-  </div></div>`;
+  </div>`;
 }
-function render() {
+
+function render(){
   const f=getFiltered();
-  document.getElementById('countBadge').textContent=`${db.length} 個案例`;
-  document.getElementById('grid').innerHTML=f.length?f.map(renderCard).join(''):'<div class="empty-state"><p>沒有符合的案例</p></div>';
+  document.getElementById('countBadge').textContent=db.length+' 個案例';
+  document.getElementById('grid').innerHTML=f.length?f.map(renderCard).join(''):'<div class="empty-state">沒有符合的案例</div>';
 }
-function filterByTag(tag) {
+
+function openModal(id){
+  const e=db.find(x=>x.id===id);
+  if(!e)return;
+
+  // meta row
+  document.getElementById('mMeta').innerHTML=
+    `<span class="badge ${pcls(e.platform)}">${plabel(e.platform)}</span>`+
+    (e.category?`<span class="cat-badge">${e.category}</span>`:'')+
+    (e.duration?`<span class="dur">${e.duration}</span>`:'');
+
+  document.getElementById('mTitle').textContent=e.title;
+  document.getElementById('mCreator').textContent=[e.creator,e.year].filter(Boolean).join(' · ');
+
+  // frames
+  const fSec=document.getElementById('mFramesSec');
+  const fGrid=document.getElementById('mFrames');
+  if(e.frames&&e.frames.length){
+    fSec.style.display='block';
+    fGrid.innerHTML=e.frames.map(f=>`<img class="frame-img" src="data:image/jpeg;base64,${f}" loading="lazy">`).join('');
+  } else {
+    fSec.style.display='none';
+    fGrid.innerHTML='';
+  }
+
+  // analysis
+  const a=e.analysis||{};
+  const blocks=[
+    ['🎨 風格色調',a.style],
+    ['🎥 運鏡畫面',a.camera],
+    ['✂️ 剪輯節奏',a.edit],
+    ['🎵 音樂音效',a.music],
+  ].filter(([,v])=>v);
+  document.getElementById('mAnalysis').innerHTML=blocks.map(([lbl,txt])=>
+    `<div class="ab"><div class="ab-label">${lbl}</div><div class="ab-text">${txt}</div></div>`
+  ).join('');
+
+  // notes
+  const nEl=document.getElementById('mNotes');
+  if(e.notes){nEl.style.display='block';nEl.innerHTML='💡 '+e.notes;}
+  else nEl.style.display='none';
+
+  // footer
+  document.getElementById('mTags').innerHTML=(e.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
+  document.getElementById('mWatch').href=e.url;
+
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function handleOverlay(ev){
+  if(ev.target===document.getElementById('overlay'))closeModal();
+}
+
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeModal();});
+document.getElementById('searchInput').addEventListener('input',ev=>{currentSearch=ev.target.value;render();});
+
+function filterByTag(tag){
   document.getElementById('searchInput').value=tag;
   currentSearch=tag;
   render();
 }
-document.getElementById('searchInput').addEventListener('input',e=>{currentSearch=e.target.value;render();});
 </script>
 </body>
 </html>
