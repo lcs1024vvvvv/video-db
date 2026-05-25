@@ -61,9 +61,9 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 
 /* modal inner layout */
 .modal-middle{display:flex;overflow:hidden;min-height:0}
-.modal-left{width:420px;flex-shrink:0;border-right:1px solid #f2f2f7;background:#1c1c1e;display:flex;align-items:flex-start}
+.modal-left{width:420px;flex-shrink:0;border-right:1px solid #f2f2f7;overflow:hidden;background:#e5e5ea}
 .modal-right{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:11px;min-width:0}
-.modal-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#1c1c1e;align-self:flex-start}
+.modal-thumb{width:100%;height:100%;object-fit:cover;display:block;min-height:200px}
 
 /* analysis */
 .analysis-section{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0}
@@ -189,8 +189,9 @@ function getFiltered(){
 }
 
 function renderCard(e){
-  const thumb=e.thumbnail
-    ?`<img class="card-thumb" src="${e.thumbnail}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
+  const thumbSrc=e.thumbnail||(e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'');
+  const thumb=thumbSrc
+    ?`<img class="card-thumb" src="${thumbSrc}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
     :`<div class="card-thumb-ph">無縮圖</div>`;
   const tags=(e.tags||[]).slice(0,5).map(t=>`<span class="tag" onclick="event.stopPropagation();filterByTag('${t}')">${t}</span>`).join('');
   return `<div class="card" onclick="openModal('${e.id}')">
@@ -227,15 +228,11 @@ function openModal(id){
   document.getElementById('mTitle').textContent=e.title;
   document.getElementById('mCreator').textContent=[e.creator,e.year].filter(Boolean).join(' · ');
 
-  // thumbnail — 優先用 maxresdefault，失敗時降級
+  // thumbnail（無縮圖時用第一幀畫格）
   const tImg=document.getElementById('mThumbImg');
-  if(e.thumbnail){
-    tImg.style.display='block';
-    // 嘗試換成最高畫質
-    const hqThumb=e.thumbnail.replace(/\/(?:hqdefault|mqdefault|sddefault|default)\.jpg/,'/maxresdefault.jpg');
-    tImg.src=hqThumb;
-    tImg.onerror=()=>{tImg.src=e.thumbnail;tImg.onerror=null;};
-  } else tImg.style.display='none';
+  const thumbSrc=e.thumbnail||(e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'');
+  if(thumbSrc){tImg.style.display='block';tImg.src=thumbSrc;}
+  else tImg.style.display='none';
 
   // frames
   const fSec=document.getElementById('mFramesSec');
