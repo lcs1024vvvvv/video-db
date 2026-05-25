@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>影像靈感資料庫</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
+
+  header { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 100; }
+  header h1 { font-size: 17px; font-weight: 700; }
+  header h1 span { color: #999; font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .search-box { padding: 7px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; width: 190px; outline: none; }
+  .search-box:focus { border-color: #007aff; }
+  .filter-btn { padding: 5px 12px; border: 1px solid #ddd; border-radius: 20px; background: #fff; font-size: 12px; cursor: pointer; }
+  .filter-btn.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+  .last-sync { font-size: 11px; color: #bbb; }
+
+  main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+
+  .card { background: #fff; border-radius: 14px; overflow: hidden; border: 1px solid #e8e8e8; transition: box-shadow 0.2s, transform 0.2s; }
+  .card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.09); transform: translateY(-2px); }
+  .card-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+  .card-thumb-placeholder { width: 100%; aspect-ratio: 16/9; background: linear-gradient(135deg,#e8e8e8,#d0d0d0); display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 13px; }
+  .card-body { padding: 13px 15px 15px; }
+  .card-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; flex-wrap: wrap; }
+  .platform-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; }
+  .platform-youtube { background: #ffecec; color: #cc0000; }
+  .platform-vimeo { background: #e8f0ff; color: #1a5aff; }
+  .platform-instagram { background: #fce8f5; color: #c13584; }
+  .platform-tiktok { background: #e8faf8; color: #333; }
+  .platform-threads { background: #f0f0f0; color: #333; }
+  .platform-other { background: #f0f0f0; color: #555; }
+  .cat-badge { font-size: 11px; background: #f0f0f0; color: #555; padding: 2px 7px; border-radius: 20px; }
+  .card-duration { font-size: 11px; color: #aaa; margin-left: auto; }
+  .card-title { font-size: 14px; font-weight: 600; line-height: 1.4; margin-bottom: 3px; }
+  .card-title a { color: inherit; text-decoration: none; }
+  .card-title a:hover { color: #007aff; }
+  .card-creator { font-size: 12px; color: #999; margin-bottom: 10px; }
+  .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
+  .analysis-block { background: #f7f7f7; border-radius: 8px; padding: 7px 9px; }
+  .analysis-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #bbb; margin-bottom: 3px; }
+  .analysis-text { font-size: 11.5px; color: #444; line-height: 1.5; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .tag { font-size: 11px; background: #f0f0f0; color: #555; padding: 2px 7px; border-radius: 20px; cursor: pointer; }
+  .tag:hover { background: #e0e0e0; }
+  .notes-block { padding: 8px 10px; background: #fffbea; border-radius: 7px; font-size: 11.5px; color: #664d00; line-height: 1.5; margin-bottom: 8px; }
+  .card-actions { display: flex; gap: 5px; padding-top: 9px; border-top: 1px solid #f0f0f0; }
+  .action-btn { flex: 1; padding: 5px; border: 1px solid #e8e8e8; border-radius: 6px; background: #fff; font-size: 11px; color: #666; cursor: pointer; text-align: center; }
+  .action-btn:hover { background: #f5f5f5; }
+  .empty-state { text-align: center; padding: 60px 20px; color: #bbb; grid-column: 1/-1; }
+  .loading { text-align: center; padding: 60px; color: #bbb; grid-column: 1/-1; font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎬 影像靈感資料庫 <span id="countBadge"></span></h1>
+  <div class="controls">
+    <input class="search-box" id="searchInput" type="text" placeholder="搜尋標題、標籤、手法…">
+    <button class="filter-btn active" onclick="setFilter('all',this)">全部</button>
+    <button class="filter-btn" onclick="setFilter('廣告',this)">廣告</button>
+    <button class="filter-btn" onclick="setFilter('MV',this)">MV</button>
+    <button class="filter-btn" onclick="setFilter('紀錄',this)">紀錄</button>
+    <button class="filter-btn" onclick="setFilter('短片',this)">短片</button>
+    <span class="last-sync" id="lastSync"></span>
+  </div>
+</header>
+<main><div class="grid" id="grid"><div class="loading">載入中…</div></div></main>
+<script>
+let db = [];
+let currentFilter = 'all';
+let currentSearch = '';
+
+// 從同一個 repo 的 data.json 讀取資料
+const DATA_URL = 'data.json';
+
+fetch(DATA_URL + '?t=' + Date.now())
+  .then(r => r.json())
+  .then(data => {
+    db = data.entries || [];
+    document.getElementById('lastSync').textContent = '最後更新：' + (data.lastUpdated || '');
+    render();
+  })
+  .catch(() => {
+    document.getElementById('grid').innerHTML = '<div class="empty-state"><p>無法載入資料</p></div>';
+  });
+
+function platformLabel(p) {
+  return {youtube:'YouTube',vimeo:'Vimeo',instagram:'IG',tiktok:'TikTok',threads:'Threads',other:'其他'}[p]||p;
+}
+function setFilter(f,btn) {
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+function getFiltered() {
+  return db.filter(e=>{
+    const mF=currentFilter==='all'||e.category===currentFilter||(e.tags||[]).includes(currentFilter);
+    const q=currentSearch.toLowerCase();
+    const mS=!q||e.title.toLowerCase().includes(q)||(e.creator||'').toLowerCase().includes(q)||(e.tags||[]).some(t=>t.toLowerCase().includes(q))||Object.values(e.analysis||{}).some(v=>v.toLowerCase().includes(q))||(e.notes||'').toLowerCase().includes(q);
+    return mF&&mS;
+  });
+}
+function renderCard(e) {
+  const thumb=e.thumbnail
+    ?`<a href="${e.url}" target="_blank"><img class="card-thumb" src="${e.thumbnail}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"></a><a href="${e.url}" target="_blank"><div class="card-thumb-placeholder" style="display:none">無縮圖</div></a>`
+    :`<a href="${e.url}" target="_blank"><div class="card-thumb-placeholder">無縮圖</div></a>`;
+  return `<div class="card">${thumb}<div class="card-body">
+    <div class="card-meta">
+      <span class="platform-badge platform-${e.platform}">${platformLabel(e.platform)}</span>
+      ${e.category?`<span class="cat-badge">${e.category}</span>`:''}
+      ${e.duration?`<span class="card-duration">${e.duration}</span>`:''}
+    </div>
+    <div class="card-title"><a href="${e.url}" target="_blank">${e.title}</a></div>
+    ${e.creator?`<div class="card-creator">${e.creator}${e.year?' · '+e.year:''}</div>`:''}
+    <div class="analysis-grid">
+      <div class="analysis-block"><div class="analysis-label">🎨 風格色調</div><div class="analysis-text">${e.analysis?.style||''}</div></div>
+      <div class="analysis-block"><div class="analysis-label">🎥 運鏡畫面</div><div class="analysis-text">${e.analysis?.camera||''}</div></div>
+      <div class="analysis-block"><div class="analysis-label">✂️ 剪輯節奏</div><div class="analysis-text">${e.analysis?.edit||''}</div></div>
+      <div class="analysis-block"><div class="analysis-label">🎵 音樂音效</div><div class="analysis-text">${e.analysis?.music||''}</div></div>
+    </div>
+    <div class="tags">${(e.tags||[]).map(t=>`<span class="tag" onclick="filterByTag('${t}')">${t}</span>`).join('')}</div>
+    ${e.notes?`<div class="notes-block">💡 ${e.notes}</div>`:''}
+    <div class="card-actions"><button class="action-btn" onclick="window.open('${e.url}','_blank')">▶ 觀看</button></div>
+  </div></div>`;
+}
+function render() {
+  const f=getFiltered();
+  document.getElementById('countBadge').textContent=`${db.length} 個案例`;
+  document.getElementById('grid').innerHTML=f.length?f.map(renderCard).join(''):'<div class="empty-state"><p>沒有符合的案例</p></div>';
+}
+function filterByTag(tag) {
+  document.getElementById('searchInput').value=tag;
+  currentSearch=tag;
+  render();
+}
+document.getElementById('searchInput').addEventListener('input',e=>{currentSearch=e.target.value;render();});
+</script>
+</body>
+</html>
