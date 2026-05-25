@@ -120,6 +120,10 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
+    <div id="mThumbSec" style="display:none;margin-top:16px">
+      <img id="mThumbImg" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#e5e5ea" alt="">
+    </div>
+
     <div class="frames-section" id="mFramesSec" style="display:none">
       <div class="frames-label">影片畫格</div>
       <div class="frames-grid" id="mFrames"></div>
@@ -212,6 +216,12 @@ function openModal(id){
 
   document.getElementById('mTitle').textContent=e.title;
   document.getElementById('mCreator').textContent=[e.creator,e.year].filter(Boolean).join(' · ');
+
+  // thumbnail
+  const tSec=document.getElementById('mThumbSec');
+  const tImg=document.getElementById('mThumbImg');
+  if(e.thumbnail){tSec.style.display='block';tImg.src=e.thumbnail;}
+  else tSec.style.display='none';
 
   // frames
   const fSec=document.getElementById('mFramesSec');
