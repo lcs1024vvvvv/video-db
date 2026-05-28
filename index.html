@@ -95,17 +95,24 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 
 .empty-state,.loading{text-align:center;padding:60px 20px;color:#aeaeb2;grid-column:1/-1;font-size:14px}
 
-/* ── User Notes editing ── */
-.user-notes-section{border-radius:10px;border:1.5px solid #e5e5ea;overflow:hidden;flex-shrink:0;transition:border-color .15s}
-.user-notes-section:focus-within{border-color:#007aff}
-.user-notes-label{font-size:10px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px 0;display:flex;align-items:center;gap:5px}
-.user-notes-ta{width:100%;min-height:88px;resize:vertical;border:none;outline:none;padding:5px 12px 10px;font-size:13px;font-family:inherit;color:#1c1c1e;line-height:1.6;background:transparent}
+/* ── User Notes ── */
+.user-notes-section{padding:12px 16px 14px;border-top:1px solid #f2f2f7;flex-shrink:0}
+.user-notes-label{font-size:10px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+/* view mode */
+.notes-view-text{font-size:13px;line-height:1.6;color:#636366;min-height:20px;white-space:pre-wrap}
+.notes-view-text.has-content{color:#1c1c1e}
+.edit-note-btn{padding:3px 12px;background:#f2f2f7;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:#007aff;transition:background .15s}
+.edit-note-btn:hover{background:#e5e5ea}
+/* edit mode */
+.notes-edit{display:none}
+.user-notes-ta{width:100%;min-height:72px;resize:vertical;border:1.5px solid #007aff;border-radius:8px;outline:none;padding:8px 10px;font-size:13px;font-family:inherit;color:#1c1c1e;line-height:1.6;background:#fff;margin-bottom:8px}
 .user-notes-ta::placeholder{color:#c7c7cc}
-.user-notes-ft{display:flex;justify-content:space-between;align-items:center;padding:5px 10px 7px;border-top:1px solid #f2f2f7;gap:8px}
+.user-notes-ft{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 .save-status{font-size:11px;color:#8e8e93;flex:1}
 .save-status.ok{color:#34c759}
 .save-status.err{color:#ff3b30}
-.save-btn{padding:5px 14px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s;flex-shrink:0}
+.cancel-note-btn{padding:5px 14px;background:#f2f2f7;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:#636366}
+.save-btn{padding:5px 14px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s}
 .save-btn:hover{opacity:.8}
 .save-btn:disabled{opacity:.45;cursor:default}
 
@@ -171,18 +178,30 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
       <div class="modal-right">
         <div class="analysis-section" id="mAnalysis"></div>
         <div class="notes-section" id="mNotes" style="display:none"></div>
-        <!-- 我的筆記（可編輯） -->
-        <div class="user-notes-section">
-          <div class="user-notes-label">✏️ 我的筆記</div>
-          <textarea id="mUserNotes" class="user-notes-ta" placeholder="記下你對這支影片的想法、可借鑒的手法、或任何靈感筆記…"></textarea>
-          <div class="user-notes-ft">
-            <span class="save-status" id="mSaveStatus"></span>
-            <button class="save-btn" id="mSaveBtn" onclick="saveUserNotes()">儲存筆記</button>
-          </div>
-        </div>
         <div class="modal-ft">
           <div class="modal-tags" id="mTags"></div>
           <a class="watch-btn" id="mWatch" href="#" target="_blank">▶ 觀看原片</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 我的筆記 — full-width, always visible -->
+    <div class="user-notes-section">
+      <div class="user-notes-label">
+        <span>✏️ 我的筆記</span>
+        <button class="edit-note-btn" id="mEditNoteBtn" onclick="editUserNotes()">編輯</button>
+      </div>
+      <!-- 查看模式 -->
+      <div id="mNotesView">
+        <div id="mNotesViewText" class="notes-view-text">尚無筆記，點擊「編輯」新增想法</div>
+      </div>
+      <!-- 編輯模式 -->
+      <div class="notes-edit" id="mNotesEdit">
+        <textarea id="mUserNotes" class="user-notes-ta" placeholder="記下你對這支影片的想法、可借鑒的手法、或任何靈感筆記…"></textarea>
+        <div class="user-notes-ft">
+          <span class="save-status" id="mSaveStatus"></span>
+          <button class="cancel-note-btn" onclick="cancelEditNotes()">取消</button>
+          <button class="save-btn" id="mSaveBtn" onclick="saveUserNotes()">儲存</button>
         </div>
       </div>
     </div>
@@ -315,8 +334,14 @@ function openModal(id){
   if(e.notes){nEl.style.display='block';nEl.innerHTML='💡 '+e.notes;}
   else nEl.style.display='none';
 
-  // user notes
-  document.getElementById('mUserNotes').value=e.userNotes||'';
+  // user notes — 預設顯示查看模式
+  const un=e.userNotes||'';
+  const vtEl=document.getElementById('mNotesViewText');
+  vtEl.textContent=un||'尚無筆記，點擊「編輯」新增想法';
+  vtEl.className='notes-view-text'+(un?' has-content':'');
+  document.getElementById('mNotesView').style.display='block';
+  document.getElementById('mNotesEdit').style.display='none';
+  document.getElementById('mEditNoteBtn').style.display='';
   document.getElementById('mSaveStatus').textContent='';
   document.getElementById('mSaveStatus').className='save-status';
 
@@ -326,6 +351,23 @@ function openModal(id){
 
   document.getElementById('overlay').classList.add('open');
   document.body.style.overflow='hidden';
+}
+
+// ── 筆記 編輯 / 取消 ─────────────────────────────────────────────────────────
+function editUserNotes(){
+  const e=db.find(x=>x.id===currentEntryId);
+  document.getElementById('mUserNotes').value=e?e.userNotes||'':'';
+  document.getElementById('mNotesView').style.display='none';
+  document.getElementById('mNotesEdit').style.display='block';
+  document.getElementById('mEditNoteBtn').style.display='none';
+  document.getElementById('mUserNotes').focus();
+}
+
+function cancelEditNotes(){
+  document.getElementById('mNotesView').style.display='block';
+  document.getElementById('mNotesEdit').style.display='none';
+  document.getElementById('mEditNoteBtn').style.display='';
+  document.getElementById('mSaveStatus').textContent='';
 }
 
 // ── 儲存筆記 ──────────────────────────────────────────────────────────────────
@@ -371,6 +413,15 @@ async function saveUserNotes(){
     db[db.findIndex(x=>x.id===currentEntryId)].userNotes=notes;
     statusEl.textContent='✓ 已儲存';
     statusEl.className='save-status ok';
+    // 切回查看模式
+    setTimeout(()=>{
+      const vtEl=document.getElementById('mNotesViewText');
+      vtEl.textContent=notes||'尚無筆記，點擊「編輯」新增想法';
+      vtEl.className='notes-view-text'+(notes?' has-content':'');
+      document.getElementById('mNotesView').style.display='block';
+      document.getElementById('mNotesEdit').style.display='none';
+      document.getElementById('mEditNoteBtn').style.display='';
+    },800);
   }catch(err){
     statusEl.textContent='❌ '+err.message;
     statusEl.className='save-status err';
