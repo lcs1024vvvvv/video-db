@@ -354,8 +354,7 @@ async function saveUserNotes(){
     if(!getR.ok)throw new Error('無法取得資料庫：'+getR.status);
     const getJ=await getR.json();
     const sha=getJ.sha;
-    const rawDb=JSON.parse(atob(getJ.content.replace(/
-/g,'')));
+    const rawDb=JSON.parse(atob(getJ.content.replace(/\n/g,'')));
 
     // 更新目標 entry
     const idx=rawDb.entries.findIndex(x=>x.id===currentEntryId);
