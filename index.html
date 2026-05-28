@@ -167,7 +167,10 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
         <div class="modal-title" id="mTitle"></div>
         <div class="modal-creator" id="mCreator"></div>
       </div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+        <a class="watch-btn" id="mWatch" href="#" target="_blank">▶ 觀看原片</a>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
     </div>
 
     <!-- middle: thumbnail (left) + analysis (right) -->
@@ -178,10 +181,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
       <div class="modal-right">
         <div class="analysis-section" id="mAnalysis"></div>
         <div class="notes-section" id="mNotes" style="display:none"></div>
-        <div class="modal-ft">
-          <div class="modal-tags" id="mTags"></div>
-          <a class="watch-btn" id="mWatch" href="#" target="_blank">▶ 觀看原片</a>
-        </div>
+        <div class="modal-tags" id="mTags" style="display:flex;flex-wrap:wrap;gap:4px;padding-top:6px"></div>
       </div>
     </div>
 
