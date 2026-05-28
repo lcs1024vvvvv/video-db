@@ -94,6 +94,33 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 }
 
 .empty-state,.loading{text-align:center;padding:60px 20px;color:#aeaeb2;grid-column:1/-1;font-size:14px}
+
+/* ── User Notes editing ── */
+.user-notes-section{border-radius:10px;border:1.5px solid #e5e5ea;overflow:hidden;flex-shrink:0;transition:border-color .15s}
+.user-notes-section:focus-within{border-color:#007aff}
+.user-notes-label{font-size:10px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px 0;display:flex;align-items:center;gap:5px}
+.user-notes-ta{width:100%;min-height:88px;resize:vertical;border:none;outline:none;padding:5px 12px 10px;font-size:13px;font-family:inherit;color:#1c1c1e;line-height:1.6;background:transparent}
+.user-notes-ta::placeholder{color:#c7c7cc}
+.user-notes-ft{display:flex;justify-content:space-between;align-items:center;padding:5px 10px 7px;border-top:1px solid #f2f2f7;gap:8px}
+.save-status{font-size:11px;color:#8e8e93;flex:1}
+.save-status.ok{color:#34c759}
+.save-status.err{color:#ff3b30}
+.save-btn{padding:5px 14px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s;flex-shrink:0}
+.save-btn:hover{opacity:.8}
+.save-btn:disabled{opacity:.45;cursor:default}
+
+/* ── Token Settings Panel ── */
+.settings-btn{width:28px;height:28px;border-radius:50%;background:#f2f2f7;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;color:#636366;transition:background .15s;flex-shrink:0}
+.settings-btn:hover{background:#e5e5ea}
+.token-panel{display:none;position:fixed;top:58px;right:16px;background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,.14);width:300px}
+.token-panel.open{display:block}
+.token-panel h3{font-size:13px;font-weight:700;margin-bottom:4px}
+.token-panel p{font-size:11.5px;color:#636366;margin-bottom:10px;line-height:1.5}
+.token-input{width:100%;padding:7px 10px;border:1.5px solid #e5e5ea;border-radius:8px;font-size:12px;outline:none;font-family:monospace;margin-bottom:8px}
+.token-input:focus{border-color:#007aff}
+.token-save-btn{width:100%;padding:8px;background:#1c1c1e;color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.token-save-btn:hover{opacity:.8}
+.token-status{font-size:11px;margin-top:6px;text-align:center}
 </style>
 </head>
 <body>
@@ -108,8 +135,18 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
     <button class="filter-btn" onclick="setFilter('短片',this)">短片</button>
     <button class="filter-btn" onclick="setFilter('婚攝',this)">婚攝</button>
     <span class="last-sync" id="lastSync"></span>
+    <button class="settings-btn" title="設定 GitHub Token" onclick="toggleTokenPanel()">⚙️</button>
   </div>
 </header>
+
+<!-- Token Settings Panel -->
+<div class="token-panel" id="tokenPanel">
+  <h3>🔑 GitHub Token 設定</h3>
+  <p>用於從網頁直接儲存筆記到資料庫。Token 只存在你的瀏覽器，不會上傳。</p>
+  <input class="token-input" id="tokenInput" type="password" placeholder="ghp_xxxxxxxxxxxx">
+  <button class="token-save-btn" onclick="saveToken()">儲存 Token</button>
+  <div class="token-status" id="tokenStatus"></div>
+</div>
 <main><div class="grid" id="grid"><div class="loading">載入中…</div></div></main>
 
 <!-- ── Modal ── -->
@@ -134,6 +171,15 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
       <div class="modal-right">
         <div class="analysis-section" id="mAnalysis"></div>
         <div class="notes-section" id="mNotes" style="display:none"></div>
+        <!-- 我的筆記（可編輯） -->
+        <div class="user-notes-section">
+          <div class="user-notes-label">✏️ 我的筆記</div>
+          <textarea id="mUserNotes" class="user-notes-ta" placeholder="記下你對這支影片的想法、可借鑒的手法、或任何靈感筆記…"></textarea>
+          <div class="user-notes-ft">
+            <span class="save-status" id="mSaveStatus"></span>
+            <button class="save-btn" id="mSaveBtn" onclick="saveUserNotes()">儲存筆記</button>
+          </div>
+        </div>
         <div class="modal-ft">
           <div class="modal-tags" id="mTags"></div>
           <a class="watch-btn" id="mWatch" href="#" target="_blank">▶ 觀看原片</a>
@@ -154,6 +200,12 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 let db=[];
 let currentFilter='all';
 let currentSearch='';
+let currentEntryId=null;
+
+// ── GitHub 設定（從 URL 自動偵測）──
+function ghUser(){return window.location.hostname.split('.')[0]}
+function ghRepo(){return window.location.pathname.split('/').filter(Boolean)[0]||'video-db'}
+function ghToken(){return localStorage.getItem('ghToken')||''}
 
 fetch('data.json?t='+Date.now())
   .then(r=>r.json())
@@ -183,7 +235,7 @@ function getFiltered(){
   return db.filter(e=>{
     const mF=currentFilter==='all'||e.category===currentFilter||(e.tags||[]).includes(currentFilter);
     const q=currentSearch.toLowerCase();
-    const mS=!q||[e.title,e.creator||'',...(e.tags||[]),...Object.values(e.analysis||{})].join(' ').toLowerCase().includes(q);
+    const mS=!q||[e.title,e.creator||'',...(e.tags||[]),...Object.values(e.analysis||{}),e.notes||'',e.userNotes||''].join(' ').toLowerCase().includes(q);
     return mF&&mS;
   });
 }
@@ -218,6 +270,7 @@ function render(){
 function openModal(id){
   const e=db.find(x=>x.id===id);
   if(!e)return;
+  currentEntryId=id;
 
   // meta row
   document.getElementById('mMeta').innerHTML=
@@ -262,6 +315,11 @@ function openModal(id){
   if(e.notes){nEl.style.display='block';nEl.innerHTML='💡 '+e.notes;}
   else nEl.style.display='none';
 
+  // user notes
+  document.getElementById('mUserNotes').value=e.userNotes||'';
+  document.getElementById('mSaveStatus').textContent='';
+  document.getElementById('mSaveStatus').className='save-status';
+
   // footer
   document.getElementById('mTags').innerHTML=(e.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
   document.getElementById('mWatch').href=e.url;
@@ -270,9 +328,90 @@ function openModal(id){
   document.body.style.overflow='hidden';
 }
 
+// ── 儲存筆記 ──────────────────────────────────────────────────────────────────
+async function saveUserNotes(){
+  const token=ghToken();
+  if(!token){
+    toggleTokenPanel();
+    document.getElementById('mSaveStatus').textContent='請先設定 GitHub Token';
+    document.getElementById('mSaveStatus').className='save-status err';
+    return;
+  }
+  const notes=document.getElementById('mUserNotes').value;
+  const btn=document.getElementById('mSaveBtn');
+  const statusEl=document.getElementById('mSaveStatus');
+  btn.disabled=true;
+  statusEl.className='save-status';
+  statusEl.textContent='儲存中…';
+
+  try{
+    const user=ghUser(), repo=ghRepo();
+    const apiUrl=`https://api.github.com/repos/${user}/${repo}/contents/data.json`;
+    const headers={'Authorization':'token '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+
+    // 取得現有檔案與 SHA
+    const getR=await fetch(apiUrl,{headers});
+    if(!getR.ok)throw new Error('無法取得資料庫：'+getR.status);
+    const getJ=await getR.json();
+    const sha=getJ.sha;
+    const rawDb=JSON.parse(atob(getJ.content.replace(/
+/g,'')));
+
+    // 更新目標 entry
+    const idx=rawDb.entries.findIndex(x=>x.id===currentEntryId);
+    if(idx===-1)throw new Error('找不到此筆記錄');
+    rawDb.entries[idx].userNotes=notes;
+    rawDb.lastUpdated=new Date().toISOString().slice(0,10);
+
+    // PUT 回去
+    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(rawDb,null,2))));
+    const putR=await fetch(apiUrl,{method:'PUT',headers,body:JSON.stringify({message:'📝 更新筆記：'+rawDb.entries[idx].title,content:encoded,sha})});
+    if(!putR.ok)throw new Error('推送失敗：'+putR.status);
+
+    // 更新本地 db
+    db[db.findIndex(x=>x.id===currentEntryId)].userNotes=notes;
+    statusEl.textContent='✓ 已儲存';
+    statusEl.className='save-status ok';
+  }catch(err){
+    statusEl.textContent='❌ '+err.message;
+    statusEl.className='save-status err';
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+// ── Token 設定面板 ────────────────────────────────────────────────────────────
+function toggleTokenPanel(){
+  const panel=document.getElementById('tokenPanel');
+  panel.classList.toggle('open');
+  if(panel.classList.contains('open')){
+    const t=ghToken();
+    document.getElementById('tokenInput').value=t?'••••••••••••':'';
+    document.getElementById('tokenStatus').textContent=t?'✓ Token 已設定':'尚未設定';
+    document.getElementById('tokenStatus').style.color=t?'#34c759':'#ff3b30';
+  }
+}
+
+function saveToken(){
+  const val=document.getElementById('tokenInput').value.trim();
+  if(!val||val.startsWith('•'))return;
+  localStorage.setItem('ghToken',val);
+  document.getElementById('tokenStatus').textContent='✓ Token 已儲存';
+  document.getElementById('tokenStatus').style.color='#34c759';
+  setTimeout(()=>document.getElementById('tokenPanel').classList.remove('open'),1200);
+}
+
+// 點其他地方關閉 Token 面板
+document.addEventListener('click',e=>{
+  const panel=document.getElementById('tokenPanel');
+  if(!panel.contains(e.target)&&!e.target.closest('.settings-btn'))
+    panel.classList.remove('open');
+});
+
 function closeModal(){
   document.getElementById('overlay').classList.remove('open');
   document.body.style.overflow='';
+  currentEntryId=null;
 }
 
 function handleOverlay(ev){
