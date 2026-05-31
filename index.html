@@ -117,9 +117,30 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .save-btn:hover{opacity:.8}
 .save-btn:disabled{opacity:.45;cursor:default}
 
-/* ── Token Settings Panel ── */
+/* ── Delete / Trash ── */
 .del-btn{width:28px;height:28px;border-radius:50%;background:#fff0f0;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
 .del-btn:hover{background:#ffd6d6}
+.trash-btn{width:32px;height:32px;border-radius:50%;background:#f2f2f7;border:none;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0;position:relative}
+.trash-btn:hover{background:#e5e5ea}
+.trash-badge{position:absolute;top:-3px;right:-3px;background:#ff3b30;color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 4px;display:none}
+/* trash modal */
+.trash-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:none;align-items:center;justify-content:center;padding:20px}
+.trash-modal-overlay.open{display:flex}
+.trash-modal{background:#fff;border-radius:20px;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.trash-modal-hd{padding:16px 20px;border-bottom:1px solid #f2f2f7;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.trash-modal-hd h2{font-size:16px;font-weight:700}
+.trash-list{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.trash-item{background:#f9f9f9;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px}
+.trash-item-thumb{width:64px;height:36px;object-fit:cover;border-radius:6px;background:#e5e5ea;flex-shrink:0}
+.trash-item-info{flex:1;min-width:0}
+.trash-item-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trash-item-meta{font-size:11px;color:#8e8e93;margin-top:2px}
+.trash-item-actions{display:flex;gap:6px;flex-shrink:0}
+.restore-btn{padding:4px 10px;background:#34c759;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer}
+.purge-btn{padding:4px 10px;background:#ff3b30;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer}
+.trash-empty{text-align:center;padding:40px;color:#aeaeb2;font-size:13px}
+
+/* ── Token Settings Panel ── */
 .settings-btn{width:28px;height:28px;border-radius:50%;background:#f2f2f7;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;color:#636366;transition:background .15s;flex-shrink:0}
 .settings-btn:hover{background:#e5e5ea}
 .token-panel{display:none;position:fixed;top:58px;right:16px;background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,.14);width:300px}
@@ -145,9 +166,21 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
     <button class="filter-btn" onclick="setFilter('短片',this)">短片</button>
     <button class="filter-btn" onclick="setFilter('婚攝',this)">婚攝</button>
     <span class="last-sync" id="lastSync"></span>
+    <button class="trash-btn" title="垃圾桶" onclick="openTrash()">🗑<span class="trash-badge" id="trashBadge"></span></button>
     <button class="settings-btn" title="設定 GitHub Token" onclick="toggleTokenPanel()">⚙️</button>
   </div>
 </header>
+
+<!-- 垃圾桶 Modal -->
+<div class="trash-modal-overlay" id="trashOverlay" onclick="if(event.target===this)closeTrash()">
+  <div class="trash-modal">
+    <div class="trash-modal-hd">
+      <h2>🗑 垃圾桶 <span id="trashCount" style="font-weight:400;color:#8e8e93;font-size:13px"></span></h2>
+      <button class="modal-close" onclick="closeTrash()">✕</button>
+    </div>
+    <div class="trash-list" id="trashList"></div>
+  </div>
+</div>
 
 <!-- Token Settings Panel -->
 <div class="token-panel" id="tokenPanel">
@@ -234,7 +267,9 @@ fetch('data.json?t='+Date.now())
   .then(r=>r.json())
   .then(data=>{
     db=data.entries||[];
+    trashDb=data.trash||[];
     document.getElementById('lastSync').textContent='最後更新：'+(data.lastUpdated||'');
+    _updateTrashBadge();
     render();
   })
   .catch(()=>{
@@ -434,33 +469,29 @@ async function saveUserNotes(){
   }
 }
 
-// ── 刪除影片 ──────────────────────────────────────────────────────────────────
+// ── 刪除影片（移入垃圾桶）────────────────────────────────────────────────────
 async function deleteEntry(){
   const entry=db.find(x=>x.id===currentEntryId);
   if(!entry)return;
-  if(!confirm(`確定要刪除「${entry.title}」？此操作無法復原。`))return;
+  if(!confirm(`將「${entry.title}」移入垃圾桶？7 天後自動清除，可從垃圾桶還原。`))return;
 
-  const token=ghToken();
-  if(!token){toggleTokenPanel();return;}
+  if(!ghToken()){
+    toggleTokenPanel();
+    alert('請先在 ⚙️ 設定 GitHub Token，才能操作資料庫。');
+    return;
+  }
 
   const btn=document.getElementById('mDelBtn');
   btn.disabled=true;btn.textContent='⏳';
 
   try{
-    const user=ghUser(),repo=ghRepo();
-    const apiUrl=`https://api.github.com/repos/${user}/${repo}/contents/data.json`;
-    const headers={'Authorization':'token '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
-    const getR=await fetch(apiUrl,{headers});
-    if(!getR.ok)throw new Error('取得資料失敗');
-    const getJ=await getR.json();
-    const rawDb=JSON.parse(atob(getJ.content.replace(/\n/g,'')));
-    rawDb.entries=rawDb.entries.filter(x=>x.id!==currentEntryId);
-    rawDb.lastUpdated=new Date().toISOString().slice(0,10);
-    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(rawDb,null,2))));
-    const putR=await fetch(apiUrl,{method:'PUT',headers,body:JSON.stringify({message:`🗑 刪除影片：${entry.title}`,content:encoded,sha:getJ.sha})});
-    if(!putR.ok)throw new Error('推送失敗');
-    // 本地更新
-    db=db.filter(x=>x.id!==currentEntryId);
+    const deleted={...entry,deletedAt:new Date().toISOString().slice(0,10)};
+    const newEntries=db.filter(x=>x.id!==currentEntryId);
+    const newTrash=[deleted,...trashDb];
+    await _ghUpdateDb({entries:newEntries,trash:newTrash},`🗑 移入垃圾桶：${entry.title}`);
+    db=newEntries;
+    trashDb=newTrash;
+    _updateTrashBadge();
     closeModal();
     render();
   }catch(err){
@@ -501,6 +532,89 @@ function closeModal(){
   document.getElementById('overlay').classList.remove('open');
   document.body.style.overflow='';
   currentEntryId=null;
+}
+
+// ── 垃圾桶 ────────────────────────────────────────────────────────────────────
+let trashDb=[];
+
+function _updateTrashBadge(){
+  const b=document.getElementById('trashBadge');
+  if(trashDb.length){b.textContent=trashDb.length;b.style.display='block';}
+  else b.style.display='none';
+}
+
+function openTrash(){
+  document.getElementById('trashCount').textContent=`（${trashDb.length} 筆，7 天後自動清除）`;
+  const list=document.getElementById('trashList');
+  if(!trashDb.length){list.innerHTML='<div class="trash-empty">垃圾桶是空的</div>';
+  }else{
+    list.innerHTML=trashDb.map(e=>{
+      const thumb=e.thumbnail||(e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'');
+      const daysLeft=Math.max(0,7-Math.round((Date.now()-new Date(e.deletedAt+'T00:00:00').getTime())/86400000));
+      return `<div class="trash-item">
+        ${thumb?`<img class="trash-item-thumb" src="${thumb}">`:'<div class="trash-item-thumb"></div>'}
+        <div class="trash-item-info">
+          <div class="trash-item-title">${e.title}</div>
+          <div class="trash-item-meta">${e.deletedAt} 刪除・還剩 ${daysLeft} 天</div>
+        </div>
+        <div class="trash-item-actions">
+          <button class="restore-btn" onclick="restoreEntry('${e.id}')">還原</button>
+          <button class="purge-btn" onclick="purgeEntry('${e.id}')">永久刪除</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('trashOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeTrash(){
+  document.getElementById('trashOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+async function _ghUpdateDb(rawDb, message){
+  const token=ghToken();
+  if(!token){toggleTokenPanel();throw new Error('請先設定 Token');}
+  const user=ghUser(),repo=ghRepo();
+  const apiUrl=`https://api.github.com/repos/${user}/${repo}/contents/data.json`;
+  const headers={'Authorization':'token '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+  const getR=await fetch(apiUrl,{headers});
+  if(!getR.ok)throw new Error('取得資料失敗');
+  const getJ=await getR.json();
+  rawDb.lastUpdated=new Date().toISOString().slice(0,10);
+  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(rawDb,null,2))));
+  const putR=await fetch(apiUrl,{method:'PUT',headers,body:JSON.stringify({message,content:encoded,sha:getJ.sha})});
+  if(!putR.ok)throw new Error('推送失敗 '+putR.status);
+}
+
+async function restoreEntry(id){
+  const entry=trashDb.find(x=>x.id===id);
+  if(!entry)return;
+  try{
+    const rawDb=JSON.parse(JSON.stringify({entries:db,trash:trashDb}));
+    rawDb.trash=rawDb.trash.filter(x=>x.id!==id);
+    const restored={...entry};delete restored.deletedAt;
+    rawDb.entries.unshift(restored);
+    await _ghUpdateDb(rawDb,`♻️ 還原：${entry.title}`);
+    trashDb=trashDb.filter(x=>x.id!==id);
+    db.unshift(restored);
+    _updateTrashBadge();
+    openTrash();render();
+  }catch(e){alert('還原失敗：'+e.message);}
+}
+
+async function purgeEntry(id){
+  const entry=trashDb.find(x=>x.id===id);
+  if(!entry||!confirm(`永久刪除「${entry.title}」？無法復原。`))return;
+  try{
+    const rawDb=JSON.parse(JSON.stringify({entries:db,trash:trashDb}));
+    rawDb.trash=rawDb.trash.filter(x=>x.id!==id);
+    await _ghUpdateDb(rawDb,`🗑 永久刪除：${entry.title}`);
+    trashDb=trashDb.filter(x=>x.id!==id);
+    _updateTrashBadge();
+    openTrash();
+  }catch(e){alert('刪除失敗：'+e.message);}
 }
 
 function handleOverlay(ev){
