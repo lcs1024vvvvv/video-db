@@ -35,7 +35,8 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .p-vimeo{background:#e8f0ff;color:#1a5aff}
 .p-instagram{background:#fce8f5;color:#c13584}
 .p-tiktok{background:#e8faf8;color:#333}
-.p-threads{background:#f0f0f0;color:#333}
+.p-threads{background:#1c1c1e;color:#fff}
+.p-facebook{background:#e7f0fd;color:#1877f2}
 .p-other{background:#f0f0f0;color:#555}
 .cat-badge{font-size:11px;background:#f2f2f7;color:#636366;padding:2px 8px;border-radius:20px}
 .dur{font-size:11px;color:#aeaeb2;margin-left:auto}
@@ -240,8 +241,8 @@ fetch('data.json?t='+Date.now())
     document.getElementById('grid').innerHTML='<div class="empty-state">無法載入資料</div>';
   });
 
-const PLABEL={youtube:'YouTube',vimeo:'Vimeo',instagram:'IG',tiktok:'TikTok',threads:'Threads',other:'其他'};
-const PCLS={youtube:'p-youtube',vimeo:'p-vimeo',instagram:'p-instagram',tiktok:'p-tiktok',threads:'p-threads',other:'p-other'};
+const PLABEL={youtube:'YouTube',vimeo:'Vimeo',instagram:'IG',tiktok:'TikTok',threads:'Threads',facebook:'Facebook',bilibili:'bilibili',other:'其他'};
+const PCLS={youtube:'p-youtube',vimeo:'p-vimeo',instagram:'p-instagram',tiktok:'p-tiktok',threads:'p-threads',facebook:'p-facebook',bilibili:'p-other',other:'p-other'};
 
 function plabel(p){return PLABEL[p]||p}
 function pcls(p){return PCLS[p]||'p-other'}
