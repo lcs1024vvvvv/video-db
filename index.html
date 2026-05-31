@@ -263,17 +263,36 @@ function ghUser(){return window.location.hostname.split('.')[0]}
 function ghRepo(){return window.location.pathname.split('/').filter(Boolean)[0]||'video-db'}
 function ghToken(){return localStorage.getItem('ghToken')||''}
 
+function _saveLocalCache(entries, trash){
+  try{localStorage.setItem('dbCache',JSON.stringify({entries,trash,savedAt:Date.now()}));}catch(e){}
+}
+function _loadLocalCache(){
+  try{const c=localStorage.getItem('dbCache');return c?JSON.parse(c):null;}catch(e){return null;}
+}
+
 fetch('data.json?t='+Date.now())
   .then(r=>r.json())
   .then(data=>{
-    db=data.entries||[];
-    trashDb=data.trash||[];
+    const remote={entries:data.entries||[],trash:data.trash||[]};
+    const local=_loadLocalCache();
+    // 若本地快取比 GitHub Pages 更新（CDN 尚未同步），優先用本地
+    if(local&&local.savedAt>(Date.now()-5*60*1000)&&local.entries.length<=remote.entries.length){
+      db=local.entries;
+      trashDb=local.trash||[];
+    } else {
+      db=remote.entries;
+      trashDb=remote.trash;
+      _saveLocalCache(db,trashDb);
+    }
     document.getElementById('lastSync').textContent='最後更新：'+(data.lastUpdated||'');
     _updateTrashBadge();
     render();
   })
   .catch(()=>{
-    document.getElementById('grid').innerHTML='<div class="empty-state">無法載入資料</div>';
+    // 網路失敗時用本地快取
+    const local=_loadLocalCache();
+    if(local){db=local.entries;trashDb=local.trash||[];_updateTrashBadge();render();}
+    else document.getElementById('grid').innerHTML='<div class="empty-state">無法載入資料</div>';
   });
 
 const PLABEL={youtube:'YouTube',vimeo:'Vimeo',instagram:'IG',tiktok:'TikTok',threads:'Threads',facebook:'Facebook',bilibili:'bilibili',other:'其他'};
@@ -372,6 +391,10 @@ function openModal(id){
   const nEl=document.getElementById('mNotes');
   if(e.notes){nEl.style.display='block';nEl.innerHTML='💡 '+e.notes;}
   else nEl.style.display='none';
+
+  // 重置刪除按鈕狀態
+  const delBtn=document.getElementById('mDelBtn');
+  if(delBtn){delBtn.disabled=false;delBtn.textContent='🗑';}
 
   // user notes — 預設顯示查看模式
   const un=e.userNotes||'';
@@ -491,6 +514,7 @@ async function deleteEntry(){
     await _ghUpdateDb({entries:newEntries,trash:newTrash},`🗑 移入垃圾桶：${entry.title}`);
     db=newEntries;
     trashDb=newTrash;
+    _saveLocalCache(db,trashDb);
     _updateTrashBadge();
     closeModal();
     render();
