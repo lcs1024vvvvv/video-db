@@ -42,34 +42,6 @@
       "addedAt": "2026-05-31"
     },
     {
-      "id": "entry_1780199097527",
-      "url": "https://www.facebook.com/share/v/1BpoctfHhU/?mibextid=wwXIfr",
-      "title": "未能取得影片標題（Facebook 分享連結）",
-      "creator": "未知",
-      "platform": "facebook",
-      "category": "其他",
-      "duration": "",
-      "year": "",
-      "thumbnail": "",
-      "analysis": {
-        "style": "由於僅提供 Facebook 分享連結且無法存取影片實際內容，無法判斷視覺風格、色調傾向與光線質感。建議補充影片截圖、文字描述或公開可瀏覽的連結，以利進行完整的風格分析。",
-        "camera": "無法分析運鏡方式、構圖手法與景別運用。Facebook 私人或限制分享的連結通常無法被外部讀取，需要更多素材或描述才能評估鏡頭語言。",
-        "edit": "無法判斷剪輯節奏、轉場設計與整體結構安排。若能提供影片長度、段落切分或關鍵畫面，將有助於分析剪輯邏輯與音畫配合方式。",
-        "music": "無法分析配樂風格、音效設計與聲畫關係。建議補充音樂類型、是否有旁白或環境音等資訊，以利後續評估情緒鋪陳手法。"
-      },
-      "tags": [
-        "資料不足",
-        "Facebook連結",
-        "無法解析",
-        "待補資訊"
-      ],
-      "notes": "目前資訊不足以進行影像創作分析。建議改提供 YouTube/Vimeo 公開連結、影片截圖、或文字描述（主題、長度、風格關鍵詞），以便建立完整的靈感資料庫條目。",
-      "frames": [],
-      "userNotes": "快剪手法可參考，特別是音效運用。",
-      "addedBy": "Raymond Lin",
-      "addedAt": "2026-05-31"
-    },
-    {
       "id": "entry_1779945160330",
       "url": "https://www.instagram.com/reel/DYZg9gwx4RL/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
       "title": "Sony FE 100-400mm F4.5 GM OSS 鏡頭實測短片",
@@ -222,6 +194,35 @@
     }
   ],
   "trash": [
+    {
+      "id": "entry_1780199097527",
+      "url": "https://www.facebook.com/share/v/1BpoctfHhU/?mibextid=wwXIfr",
+      "title": "未能取得影片標題（Facebook 分享連結）",
+      "creator": "未知",
+      "platform": "facebook",
+      "category": "其他",
+      "duration": "",
+      "year": "",
+      "thumbnail": "",
+      "analysis": {
+        "style": "由於僅提供 Facebook 分享連結且無法存取影片實際內容，無法判斷視覺風格、色調傾向與光線質感。建議補充影片截圖、文字描述或公開可瀏覽的連結，以利進行完整的風格分析。",
+        "camera": "無法分析運鏡方式、構圖手法與景別運用。Facebook 私人或限制分享的連結通常無法被外部讀取，需要更多素材或描述才能評估鏡頭語言。",
+        "edit": "無法判斷剪輯節奏、轉場設計與整體結構安排。若能提供影片長度、段落切分或關鍵畫面，將有助於分析剪輯邏輯與音畫配合方式。",
+        "music": "無法分析配樂風格、音效設計與聲畫關係。建議補充音樂類型、是否有旁白或環境音等資訊，以利後續評估情緒鋪陳手法。"
+      },
+      "tags": [
+        "資料不足",
+        "Facebook連結",
+        "無法解析",
+        "待補資訊"
+      ],
+      "notes": "目前資訊不足以進行影像創作分析。建議改提供 YouTube/Vimeo 公開連結、影片截圖、或文字描述（主題、長度、風格關鍵詞），以便建立完整的靈感資料庫條目。",
+      "frames": [],
+      "userNotes": "快剪手法可參考，特別是音效運用。",
+      "addedBy": "Raymond Lin",
+      "addedAt": "2026-05-31",
+      "deletedAt": "2026-05-31"
+    },
     {
       "id": "entry_1780198869823",
       "url": "https://www.facebook.com/share/v/1BpoctfHhU/?mibextid=wwXIfr",
