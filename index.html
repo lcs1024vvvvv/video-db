@@ -117,6 +117,8 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .save-btn:disabled{opacity:.45;cursor:default}
 
 /* ── Token Settings Panel ── */
+.del-btn{width:28px;height:28px;border-radius:50%;background:#fff0f0;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.del-btn:hover{background:#ffd6d6}
 .settings-btn{width:28px;height:28px;border-radius:50%;background:#f2f2f7;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;color:#636366;transition:background .15s;flex-shrink:0}
 .settings-btn:hover{background:#e5e5ea}
 .token-panel{display:none;position:fixed;top:58px;right:16px;background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,.14);width:300px}
@@ -169,6 +171,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
         <a class="watch-btn" id="mWatch" href="#" target="_blank">▶ 觀看原片</a>
+        <button class="del-btn" id="mDelBtn" onclick="deleteEntry()" title="刪除此影片">🗑</button>
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
     </div>
@@ -427,6 +430,41 @@ async function saveUserNotes(){
     statusEl.className='save-status err';
   }finally{
     btn.disabled=false;
+  }
+}
+
+// ── 刪除影片 ──────────────────────────────────────────────────────────────────
+async function deleteEntry(){
+  const entry=db.find(x=>x.id===currentEntryId);
+  if(!entry)return;
+  if(!confirm(`確定要刪除「${entry.title}」？此操作無法復原。`))return;
+
+  const token=ghToken();
+  if(!token){toggleTokenPanel();return;}
+
+  const btn=document.getElementById('mDelBtn');
+  btn.disabled=true;btn.textContent='⏳';
+
+  try{
+    const user=ghUser(),repo=ghRepo();
+    const apiUrl=`https://api.github.com/repos/${user}/${repo}/contents/data.json`;
+    const headers={'Authorization':'token '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+    const getR=await fetch(apiUrl,{headers});
+    if(!getR.ok)throw new Error('取得資料失敗');
+    const getJ=await getR.json();
+    const rawDb=JSON.parse(atob(getJ.content.replace(/\n/g,'')));
+    rawDb.entries=rawDb.entries.filter(x=>x.id!==currentEntryId);
+    rawDb.lastUpdated=new Date().toISOString().slice(0,10);
+    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(rawDb,null,2))));
+    const putR=await fetch(apiUrl,{method:'PUT',headers,body:JSON.stringify({message:`🗑 刪除影片：${entry.title}`,content:encoded,sha:getJ.sha})});
+    if(!putR.ok)throw new Error('推送失敗');
+    // 本地更新
+    db=db.filter(x=>x.id!==currentEntryId);
+    closeModal();
+    render();
+  }catch(err){
+    alert('刪除失敗：'+err.message);
+    btn.disabled=false;btn.textContent='🗑';
   }
 }
 
