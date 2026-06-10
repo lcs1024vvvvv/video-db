@@ -382,7 +382,6 @@ function openModal(id){
   // frames
   const fSec=document.getElementById('mFramesSec');
   const fGrid=document.getElementById('mFrames');
-  const isPortrait=e.orientation==='portrait';
   if(e.frames&&e.frames.length){
     fSec.style.display='block';
     fGrid.className='frames-grid'+(isPortrait?' portrait':'');
