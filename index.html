@@ -57,6 +57,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .modal-meta-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
 .modal-title{font-size:17px;font-weight:700;line-height:1.35}
 .modal-creator{font-size:12px;color:#8e8e93;margin-top:3px}
+.modal-saved-at{font-size:10px;color:#c7c7cc;margin-top:4px;letter-spacing:0.2px}
 .modal-close{width:28px;height:28px;border-radius:50%;background:#f2f2f7;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#636366;transition:background .15s}
 .modal-close:hover{background:#e5e5ea}
 
@@ -158,7 +159,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .token-save-btn:hover{opacity:.8}
 .token-status{font-size:11px;margin-top:6px;text-align:center}
 </style>
-<script>localStorage.setItem('ghToken',['ghp_','Wba3','ZEIy','R8X5','dTVA','i09u','Qh30','bbZ0','kz2C','LqQL'].join(''));</script></head>
+</head>
 <body>
 <header>
   <div class="logo">🎬 影像靈感資料庫 <span id="countBadge"></span></div>
@@ -209,6 +210,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
         <div class="modal-meta-row" id="mMeta"></div>
         <div class="modal-title" id="mTitle"></div>
         <div class="modal-creator" id="mCreator"></div>
+        <div class="modal-saved-at" id="mSavedAt"></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
         <a class="watch-btn" id="mWatch" href="#" target="_blank">▶ 觀看原片</a>
@@ -390,6 +392,17 @@ function openModal(id){
 
   document.getElementById('mTitle').textContent=e.title;
   document.getElementById('mCreator').textContent=[e.creator,e.year].filter(Boolean).join(' · ');
+  // 存入時間：優先用 savedAt，舊資料從 entry_id timestamp 推算
+  const savedAtEl=document.getElementById('mSavedAt');
+  if(e.savedAt){
+    savedAtEl.textContent='🕐 存入於 '+e.savedAt;
+  } else if(e.id&&e.id.startsWith('entry_')){
+    const ts=parseInt(e.id.replace('entry_',''));
+    if(!isNaN(ts)){
+      const d=new Date(ts);
+      savedAtEl.textContent='🕐 存入於 '+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    } else { savedAtEl.textContent=''; }
+  } else { savedAtEl.textContent=''; }
 
   // thumbnail（優先用 frames[0] base64，沒有才用外部 URL）
   const tImg=document.getElementById('mThumbImg');
