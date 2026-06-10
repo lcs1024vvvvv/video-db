@@ -27,7 +27,11 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .card{background:#fff;border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s;border:1px solid rgba(0,0,0,.06)}
 .card:hover{transform:translateY(-3px);box-shadow:0 10px 36px rgba(0,0,0,.11)}
 .card-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#e5e5ea}
+.card-thumb.portrait{aspect-ratio:9/16}
 .card-thumb-ph{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,#e5e5ea,#d1d1d6);display:flex;align-items:center;justify-content:center;color:#aeaeb2;font-size:13px}
+.card-thumb-ph.portrait{aspect-ratio:9/16}
+/* 直式卡片在 grid 裡限寬，避免太高 */
+.card.portrait{max-width:240px;justify-self:center}
 .card-body{padding:12px 14px 14px}
 .card-meta{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
 .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase}
@@ -86,6 +90,9 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .frames-label{font-size:10px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
 .frames-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .frame-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:7px;background:#e5e5ea}
+/* 直式畫格：一排，每格 9:16 */
+.frames-grid.portrait{display:flex;flex-direction:row;gap:5px;overflow-x:auto;padding-bottom:4px}
+.frames-grid.portrait .frame-img{flex-shrink:0;width:auto;height:200px;aspect-ratio:9/16;object-fit:cover}
 
 @media(max-width:700px){
   .modal-middle{flex-direction:column}
@@ -323,11 +330,15 @@ function renderCard(e){
   // 優先用 frames[0]（base64，永不過期），沒有才用外部縮圖 URL
   const frame0=e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'';
   const thumbSrc=frame0||e.thumbnail||'';
+  const isPortrait=e.orientation==='portrait';
+  const thumbCls='card-thumb'+(isPortrait?' portrait':'');
+  const phCls='card-thumb-ph'+(isPortrait?' portrait':'');
+  const cardCls='card'+(isPortrait?' portrait':'');
   const thumb=thumbSrc
-    ?`<img class="card-thumb" src="${thumbSrc}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
-    :`<div class="card-thumb-ph">無縮圖</div>`;
+    ?`<img class="${thumbCls}" src="${thumbSrc}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\"${phCls}\">無縮圖</div>'">`
+    :`<div class="${phCls}">無縮圖</div>`;
   const tags=(e.tags||[]).slice(0,5).map(t=>`<span class="tag" onclick="event.stopPropagation();filterByTag('${t}')">${t}</span>`).join('');
-  return `<div class="card" onclick="openModal('${e.id}')">
+  return `<div class="${cardCls}" onclick="openModal('${e.id}')">
     ${thumb}
     <div class="card-body">
       <div class="card-meta">
@@ -372,8 +383,10 @@ function openModal(id){
   // frames
   const fSec=document.getElementById('mFramesSec');
   const fGrid=document.getElementById('mFrames');
+  const isPortrait=e.orientation==='portrait';
   if(e.frames&&e.frames.length){
     fSec.style.display='block';
+    fGrid.className='frames-grid'+(isPortrait?' portrait':'');
     fGrid.innerHTML=e.frames.map(f=>`<img class="frame-img" src="data:image/jpeg;base64,${f}" loading="lazy">`).join('');
   } else {
     fSec.style.display='none';
