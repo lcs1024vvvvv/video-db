@@ -345,8 +345,13 @@ function getFiltered(){
     const mS=!q||scoreEntry(e,q)>0;
     return mF&&mS;
   });
-  if(!q)return results;
-  return results.slice().sort((a,b)=>scoreEntry(b,q)-scoreEntry(a,q));
+  // 有搜尋：按相關度排序；無搜尋：按存入時間降序（entry_id 含毫秒 timestamp）
+  if(q)return results.slice().sort((a,b)=>scoreEntry(b,q)-scoreEntry(a,q));
+  return results.slice().sort((a,b)=>{
+    const ta=parseInt((a.id||'').replace('entry_',''))||0;
+    const tb=parseInt((b.id||'').replace('entry_',''))||0;
+    return tb-ta;
+  });
 }
 
 function renderCard(e){
@@ -355,7 +360,7 @@ function renderCard(e){
   const thumbSrc=frame0||e.thumbnail||'';
   // 卡片縮圖統一 16:9（版面整齊），orientation 只影響 Modal 內部
   const thumb=thumbSrc
-    ?`<img class="card-thumb" src="${thumbSrc}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
+    ?`<img class="card-thumb" src="${thumbSrc}" alt="" loading="lazy" onerror="this.outerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
     :`<div class="card-thumb-ph">無縮圖</div>`;
   const tags=(e.tags||[]).slice(0,5).map(t=>`<span class="tag" onclick="event.stopPropagation();filterByTag('${t}')">${t}</span>`).join('');
   return `<div class="card" onclick="openModal('${e.id}')">
