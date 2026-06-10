@@ -338,6 +338,8 @@ function getFiltered(){
   const q=currentSearch.toLowerCase().trim();
   const results=db.filter(e=>{
     const mF=currentFilter==='all'||e.category===currentFilter||(e.tags||[]).includes(currentFilter);
+    // 教學影片只在「主動搜尋教學」或「點教學按鈕」時才顯示
+    if(e.category==='教學'&&currentFilter!=='教學'&&!q.includes('教學'))return false;
     const mS=!q||scoreEntry(e,q)>0;
     return mF&&mS;
   });
