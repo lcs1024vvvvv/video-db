@@ -315,13 +315,34 @@ function setFilter(f,btn){
   render();
 }
 
+function scoreEntry(e,q){
+  if(!q)return 0;
+  let s=0;
+  const tags=e.tags||[];
+  // tag 完全吻合：最高分
+  if(tags.some(t=>t.toLowerCase()===q))s+=10;
+  // tag 包含：次高
+  if(tags.some(t=>t.toLowerCase().includes(q)))s+=5;
+  // 標題包含
+  if((e.title||'').toLowerCase().includes(q))s+=4;
+  // 創作者
+  if((e.creator||'').toLowerCase().includes(q))s+=2;
+  // 備註（自己寫的）
+  if((e.userNotes||'').toLowerCase().includes(q))s+=2;
+  // notes（AI 摘要）
+  if((e.notes||'').toLowerCase().includes(q))s+=1;
+  return s;
+}
+
 function getFiltered(){
-  return db.filter(e=>{
+  const q=currentSearch.toLowerCase().trim();
+  const results=db.filter(e=>{
     const mF=currentFilter==='all'||e.category===currentFilter||(e.tags||[]).includes(currentFilter);
-    const q=currentSearch.toLowerCase();
-    const mS=!q||[e.title,e.creator||'',...(e.tags||[]),...Object.values(e.analysis||{}),e.notes||'',e.userNotes||''].join(' ').toLowerCase().includes(q);
+    const mS=!q||scoreEntry(e,q)>0;
     return mF&&mS;
   });
+  if(!q)return results;
+  return results.slice().sort((a,b)=>scoreEntry(b,q)-scoreEntry(a,q));
 }
 
 function renderCard(e){
