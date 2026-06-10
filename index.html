@@ -27,11 +27,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .card{background:#fff;border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s;border:1px solid rgba(0,0,0,.06)}
 .card:hover{transform:translateY(-3px);box-shadow:0 10px 36px rgba(0,0,0,.11)}
 .card-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#e5e5ea}
-.card-thumb.portrait{aspect-ratio:9/16}
 .card-thumb-ph{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,#e5e5ea,#d1d1d6);display:flex;align-items:center;justify-content:center;color:#aeaeb2;font-size:13px}
-.card-thumb-ph.portrait{aspect-ratio:9/16}
-/* 直式卡片在 grid 裡限寬，避免太高 */
-.card.portrait{max-width:240px;justify-self:center}
 .card-body{padding:12px 14px 14px}
 .card-meta{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
 .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase}
@@ -67,8 +63,10 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 /* modal inner layout */
 .modal-middle{display:flex;overflow:hidden;min-height:0}
 .modal-left{width:420px;flex-shrink:0;border-right:1px solid #f2f2f7;background:#fff;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-left.portrait{width:260px}
 .modal-right{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:11px;min-width:0}
 .modal-thumb{width:100%;max-height:300px;object-fit:contain;display:block;border-radius:8px}
+.modal-thumb.portrait{max-height:420px;width:auto;max-width:100%}
 
 /* analysis */
 .analysis-section{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0}
@@ -221,7 +219,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 
     <!-- middle: thumbnail (left) + analysis (right) -->
     <div class="modal-middle">
-      <div class="modal-left">
+      <div class="modal-left" id="mLeft">
         <img id="mThumbImg" class="modal-thumb" src="" alt="" style="display:none">
       </div>
       <div class="modal-right">
@@ -330,15 +328,12 @@ function renderCard(e){
   // 優先用 frames[0]（base64，永不過期），沒有才用外部縮圖 URL
   const frame0=e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'';
   const thumbSrc=frame0||e.thumbnail||'';
-  const isPortrait=e.orientation==='portrait';
-  const thumbCls='card-thumb'+(isPortrait?' portrait':'');
-  const phCls='card-thumb-ph'+(isPortrait?' portrait':'');
-  const cardCls='card'+(isPortrait?' portrait':'');
+  // 卡片縮圖統一 16:9（版面整齊），orientation 只影響 Modal 內部
   const thumb=thumbSrc
-    ?`<img class="${thumbCls}" src="${thumbSrc}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\"${phCls}\">無縮圖</div>'">`
-    :`<div class="${phCls}">無縮圖</div>`;
+    ?`<img class="card-thumb" src="${thumbSrc}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
+    :`<div class="card-thumb-ph">無縮圖</div>`;
   const tags=(e.tags||[]).slice(0,5).map(t=>`<span class="tag" onclick="event.stopPropagation();filterByTag('${t}')">${t}</span>`).join('');
-  return `<div class="${cardCls}" onclick="openModal('${e.id}')">
+  return `<div class="card" onclick="openModal('${e.id}')">
     ${thumb}
     <div class="card-body">
       <div class="card-meta">
@@ -375,8 +370,12 @@ function openModal(id){
 
   // thumbnail（優先用 frames[0] base64，沒有才用外部 URL）
   const tImg=document.getElementById('mThumbImg');
+  const mLeft=document.getElementById('mLeft');
   const frame0=e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'';
   const thumbSrc=frame0||e.thumbnail||'';
+  const isPortrait=e.orientation==='portrait';
+  tImg.className='modal-thumb'+(isPortrait?' portrait':'');
+  if(mLeft) mLeft.className='modal-left'+(isPortrait?' portrait':'');
   if(thumbSrc){tImg.style.display='block';tImg.src=thumbSrc;}
   else tImg.style.display='none';
 
