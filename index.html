@@ -320,7 +320,9 @@ function getFiltered(){
 }
 
 function renderCard(e){
-  const thumbSrc=e.thumbnail||(e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'');
+  // 優先用 frames[0]（base64，永不過期），沒有才用外部縮圖 URL
+  const frame0=e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'';
+  const thumbSrc=frame0||e.thumbnail||'';
   const thumb=thumbSrc
     ?`<img class="card-thumb" src="${thumbSrc}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
     :`<div class="card-thumb-ph">無縮圖</div>`;
@@ -360,9 +362,10 @@ function openModal(id){
   document.getElementById('mTitle').textContent=e.title;
   document.getElementById('mCreator').textContent=[e.creator,e.year].filter(Boolean).join(' · ');
 
-  // thumbnail（無縮圖時用第一幀畫格）
+  // thumbnail（優先用 frames[0] base64，沒有才用外部 URL）
   const tImg=document.getElementById('mThumbImg');
-  const thumbSrc=e.thumbnail||(e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'');
+  const frame0=e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'';
+  const thumbSrc=frame0||e.thumbnail||'';
   if(thumbSrc){tImg.style.display='block';tImg.src=thumbSrc;}
   else tImg.style.display='none';
 
@@ -575,7 +578,7 @@ function openTrash(){
   if(!trashDb.length){list.innerHTML='<div class="trash-empty">垃圾桶是空的</div>';
   }else{
     list.innerHTML=trashDb.map(e=>{
-      const thumb=e.thumbnail||(e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'');
+      const thumb=(e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'')||e.thumbnail||'';
       const daysLeft=Math.max(0,7-Math.round((Date.now()-new Date(e.deletedAt+'T00:00:00').getTime())/86400000));
       return `<div class="trash-item">
         ${thumb?`<img class="trash-item-thumb" src="${thumb}">`:'<div class="trash-item-thumb"></div>'}
