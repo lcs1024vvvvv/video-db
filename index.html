@@ -88,8 +88,10 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .frames-section{padding:12px 16px 16px;border-top:1px solid #f2f2f7;flex-shrink:0}
 .frames-label{font-size:10px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
 .frames-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.frame-img.pickable{cursor:pointer;transition:outline .12s}
-.frame-img.pickable:hover{outline:3px solid #007aff;outline-offset:-3px}
+.frames-grid.picking .frame-img{cursor:pointer;transition:outline .12s}
+.frames-grid.picking .frame-img:hover{outline:3px solid #007aff;outline-offset:-3px}
+.cover-pick-btn{margin-left:8px;font-size:10px;padding:2px 8px;border:1px solid #d1d1d6;border-radius:6px;background:#fff;color:#636366;cursor:pointer;font-weight:700;vertical-align:middle;line-height:1.6}
+.cover-pick-btn.active{background:#007aff;color:#fff;border-color:#007aff}
 .cover-toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(8px);background:#1c1c1e;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 .cover-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .frame-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:7px;background:#e5e5ea}
@@ -258,7 +260,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 
     <!-- bottom: frames full-width -->
     <div class="frames-section" id="mFramesSec" style="display:none">
-      <div class="frames-label">影片畫格</div>
+      <div class="frames-label">影片畫格<button id="coverPickBtn" class="cover-pick-btn" onclick="toggleCoverPick()">＋ 設為封面</button></div>
       <div class="frames-grid" id="mFrames"></div>
     </div>
 
@@ -397,6 +399,27 @@ function showToast(msg){
   window._toastT=setTimeout(()=>t.classList.remove('show'),1800);
 }
 
+let _pickMode=false;
+function _exitPickMode(){
+  _pickMode=false;
+  const btn=document.getElementById('coverPickBtn');
+  const grid=document.getElementById('mFrames');
+  if(btn){btn.classList.remove('active');btn.textContent='＋ 設為封面';}
+  if(grid)grid.classList.remove('picking');
+}
+function toggleCoverPick(){
+  if(_pickMode){_exitPickMode();return;}
+  _pickMode=true;
+  const btn=document.getElementById('coverPickBtn');
+  const grid=document.getElementById('mFrames');
+  if(btn){btn.classList.add('active');btn.textContent='點一張畫格 ✕';}
+  if(grid)grid.classList.add('picking');
+}
+function frameClick(i){
+  if(!_pickMode)return;
+  pickCover(i);
+}
+
 async function pickCover(i){
   const frames=window._frames||[];
   const f=frames[i];
@@ -404,6 +427,7 @@ async function pickCover(i){
   if(!ghToken()){toggleTokenPanel();alert('請先在 ⚙️ 設定 GitHub Token，才能更換封面。');return;}
   const e0=db.find(x=>x.id===currentEntryId);
   if(!e0)return;
+  _exitPickMode();
   showToast('封面更新中…');
   try{
     const newEntries=db.map(x=>x.id===currentEntryId?{...x,cover:f}:x);
@@ -433,7 +457,8 @@ function loadFrames(id, isPortrait){
       if(currentEntryId!==id)return;
       const frames=data.frames||[];
       window._frames=frames;
-      fGrid.innerHTML=frames.map((f,i)=>`<img class="frame-img pickable" src="data:image/jpeg;base64,${f}" loading="lazy" title="點擊設為封面" onclick="pickCover(${i})">`).join('');
+      _exitPickMode();
+      fGrid.innerHTML=frames.map((f,i)=>`<img class="frame-img" src="data:image/jpeg;base64,${f}" loading="lazy" onclick="frameClick(${i})">`).join('');
     })
     .catch(()=>{if(currentEntryId===id)fGrid.innerHTML='<div style="padding:18px 4px;color:#aeaeb2;font-size:12px">畫格載入失敗</div>';});
 }
