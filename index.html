@@ -355,10 +355,10 @@ function getFiltered(){
 }
 
 function renderCard(e){
-  // 優先用 frames[0]（base64），其次內嵌的 thumbnailB64（base64，永不過期），最後才用外部縮圖 URL
-  const frame0=e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'';
+  // 用小封面 cover（base64），fallback 舊欄位 thumbnailB64 / 外部縮圖
+  const coverB64=e.cover?'data:image/jpeg;base64,'+e.cover:'';
   const thumbB64=e.thumbnailB64?'data:image/jpeg;base64,'+e.thumbnailB64:'';
-  const thumbSrc=frame0||thumbB64||e.thumbnail||'';
+  const thumbSrc=coverB64||thumbB64||e.thumbnail||'';
   // 卡片縮圖統一 16:9（版面整齊），orientation 只影響 Modal 內部
   const thumb=thumbSrc
     ?`<img class="card-thumb" src="${thumbSrc}" alt="" loading="lazy" onerror="this.outerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
@@ -383,6 +383,24 @@ function render(){
   const f=getFiltered();
   document.getElementById('countBadge').textContent=db.length+' 個案例';
   document.getElementById('grid').innerHTML=f.length?f.map(renderCard).join(''):'<div class="empty-state">沒有符合的案例</div>';
+}
+
+function loadFrames(id, isPortrait){
+  const fSec=document.getElementById('mFramesSec');
+  const fGrid=document.getElementById('mFrames');
+  const e=db.find(x=>x.id===id);
+  if(!e||!e.frameCount){fSec.style.display='none';fGrid.innerHTML='';return;}
+  fSec.style.display='block';
+  fGrid.className='frames-grid'+(isPortrait?' portrait':'');
+  fGrid.innerHTML='<div style="padding:18px 4px;color:#aeaeb2;font-size:12px">載入畫格中…</div>';
+  fetch('frames/'+id+'.json?t='+Date.now())
+    .then(r=>{if(!r.ok)throw 0;return r.json();})
+    .then(data=>{
+      if(currentEntryId!==id)return;
+      const frames=data.frames||[];
+      fGrid.innerHTML=frames.map(f=>`<img class="frame-img" src="data:image/jpeg;base64,${f}" loading="lazy">`).join('');
+    })
+    .catch(()=>{if(currentEntryId===id)fGrid.innerHTML='<div style="padding:18px 4px;color:#aeaeb2;font-size:12px">畫格載入失敗</div>';});
 }
 
 function openModal(id){
@@ -410,29 +428,20 @@ function openModal(id){
     } else { savedAtEl.textContent=''; }
   } else { savedAtEl.textContent=''; }
 
-  // thumbnail（優先 frames[0] base64，其次內嵌 thumbnailB64，最後外部 URL）
+  // thumbnail（小封面 cover，fallback 舊 thumbnailB64 / 外部 URL）
   const tImg=document.getElementById('mThumbImg');
   const mLeft=document.getElementById('mLeft');
-  const frame0=e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'';
+  const coverB64=e.cover?'data:image/jpeg;base64,'+e.cover:'';
   const thumbB64=e.thumbnailB64?'data:image/jpeg;base64,'+e.thumbnailB64:'';
-  const thumbSrc=frame0||thumbB64||e.thumbnail||'';
+  const thumbSrc=coverB64||thumbB64||e.thumbnail||'';
   const isPortrait=e.orientation==='portrait';
   tImg.className='modal-thumb'+(isPortrait?' portrait':'');
   if(mLeft) mLeft.className='modal-left'+(isPortrait?' portrait':'');
   if(thumbSrc){tImg.style.display='block';tImg.src=thumbSrc;}
   else tImg.style.display='none';
 
-  // frames
-  const fSec=document.getElementById('mFramesSec');
-  const fGrid=document.getElementById('mFrames');
-  if(e.frames&&e.frames.length){
-    fSec.style.display='block';
-    fGrid.className='frames-grid'+(isPortrait?' portrait':'');
-    fGrid.innerHTML=e.frames.map(f=>`<img class="frame-img" src="data:image/jpeg;base64,${f}" loading="lazy">`).join('');
-  } else {
-    fSec.style.display='none';
-    fGrid.innerHTML='';
-  }
+  // frames：lazy load frames/{id}.json（主檔已不含 frames）
+  loadFrames(e.id, isPortrait);
 
   // analysis
   const a=e.analysis||{};
@@ -632,7 +641,7 @@ function openTrash(){
   if(!trashDb.length){list.innerHTML='<div class="trash-empty">垃圾桶是空的</div>';
   }else{
     list.innerHTML=trashDb.map(e=>{
-      const thumb=(e.frames&&e.frames.length?'data:image/jpeg;base64,'+e.frames[0]:'')||(e.thumbnailB64?'data:image/jpeg;base64,'+e.thumbnailB64:'')||e.thumbnail||'';
+      const thumb=(e.cover?'data:image/jpeg;base64,'+e.cover:'')||(e.thumbnailB64?'data:image/jpeg;base64,'+e.thumbnailB64:'')||e.thumbnail||'';
       const daysLeft=Math.max(0,7-Math.round((Date.now()-new Date(e.deletedAt+'T00:00:00').getTime())/86400000));
       return `<div class="trash-item">
         ${thumb?`<img class="trash-item-thumb" src="${thumb}">`:'<div class="trash-item-thumb"></div>'}
