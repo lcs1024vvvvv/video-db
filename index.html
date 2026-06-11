@@ -455,7 +455,7 @@ function loadFrames(id, isPortrait){
     .then(r=>{if(!r.ok)throw 0;return r.json();})
     .then(data=>{
       if(currentEntryId!==id)return;
-      const frames=data.frames||[];
+      const frames=(data.frames||[]).slice(0,8);  // 保險：最多顯示 8 張
       window._frames=frames;
       _exitPickMode();
       // Modal 大圖換成全解析度的第一格（海報），卡片仍用小封面
