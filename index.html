@@ -458,6 +458,9 @@ function loadFrames(id, isPortrait){
       const frames=data.frames||[];
       window._frames=frames;
       _exitPickMode();
+      // Modal 大圖換成全解析度的第一格（海報），卡片仍用小封面
+      const tImgFull=document.getElementById('mThumbImg');
+      if(tImgFull&&frames[0]){tImgFull.style.display='block';tImgFull.src='data:image/jpeg;base64,'+frames[0];}
       fGrid.innerHTML=frames.map((f,i)=>`<img class="frame-img" src="data:image/jpeg;base64,${f}" loading="lazy" onclick="frameClick(${i})">`).join('');
     })
     .catch(()=>{if(currentEntryId===id)fGrid.innerHTML='<div style="padding:18px 4px;color:#aeaeb2;font-size:12px">畫格載入失敗</div>';});
