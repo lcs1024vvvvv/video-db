@@ -88,6 +88,10 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .frames-section{padding:12px 16px 16px;border-top:1px solid #f2f2f7;flex-shrink:0}
 .frames-label{font-size:10px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
 .frames-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.frame-img.pickable{cursor:pointer;transition:outline .12s}
+.frame-img.pickable:hover{outline:3px solid #007aff;outline-offset:-3px}
+.cover-toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(8px);background:#1c1c1e;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+.cover-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .frame-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:7px;background:#e5e5ea}
 /* 直式畫格：一排，每格 9:16 */
 .frames-grid.portrait{display:flex;flex-direction:row;gap:5px;overflow-x:auto;padding-bottom:4px}
@@ -385,6 +389,36 @@ function render(){
   document.getElementById('grid').innerHTML=f.length?f.map(renderCard).join(''):'<div class="empty-state">沒有符合的案例</div>';
 }
 
+function showToast(msg){
+  let t=document.getElementById('coverToast');
+  if(!t){t=document.createElement('div');t.id='coverToast';t.className='cover-toast';document.body.appendChild(t);}
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(window._toastT);
+  window._toastT=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+async function pickCover(i){
+  const frames=window._frames||[];
+  const f=frames[i];
+  if(!f||!currentEntryId)return;
+  if(!ghToken()){toggleTokenPanel();alert('請先在 ⚙️ 設定 GitHub Token，才能更換封面。');return;}
+  const e0=db.find(x=>x.id===currentEntryId);
+  if(!e0)return;
+  showToast('封面更新中…');
+  try{
+    const newEntries=db.map(x=>x.id===currentEntryId?{...x,cover:f}:x);
+    await _ghUpdateDb({entries:newEntries,trash:trashDb},'🖼️ 更新封面：'+e0.title);
+    db=newEntries;
+    _saveLocalCache(db,trashDb);
+    const tImg=document.getElementById('mThumbImg');
+    if(tImg){tImg.style.display='block';tImg.src='data:image/jpeg;base64,'+f;}
+    render();
+    showToast('✅ 封面已更新');
+  }catch(err){
+    showToast('❌ 更新失敗：'+err.message);
+  }
+}
+
 function loadFrames(id, isPortrait){
   const fSec=document.getElementById('mFramesSec');
   const fGrid=document.getElementById('mFrames');
@@ -398,7 +432,8 @@ function loadFrames(id, isPortrait){
     .then(data=>{
       if(currentEntryId!==id)return;
       const frames=data.frames||[];
-      fGrid.innerHTML=frames.map(f=>`<img class="frame-img" src="data:image/jpeg;base64,${f}" loading="lazy">`).join('');
+      window._frames=frames;
+      fGrid.innerHTML=frames.map((f,i)=>`<img class="frame-img pickable" src="data:image/jpeg;base64,${f}" loading="lazy" title="點擊設為封面" onclick="pickCover(${i})">`).join('');
     })
     .catch(()=>{if(currentEntryId===id)fGrid.innerHTML='<div style="padding:18px 4px;color:#aeaeb2;font-size:12px">畫格載入失敗</div>';});
 }
@@ -517,30 +552,11 @@ async function saveUserNotes(){
   statusEl.textContent='儲存中…';
 
   try{
-    const user=ghUser(), repo=ghRepo();
-    const apiUrl=`https://api.github.com/repos/${user}/${repo}/contents/data.json`;
-    const headers={'Authorization':'token '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
-
-    // 取得現有檔案與 SHA
-    const getR=await fetch(apiUrl,{headers});
-    if(!getR.ok)throw new Error('無法取得資料庫：'+getR.status);
-    const getJ=await getR.json();
-    const sha=getJ.sha;
-    const rawDb=JSON.parse(atob(getJ.content.replace(/\n/g,'')));
-
-    // 更新目標 entry
-    const idx=rawDb.entries.findIndex(x=>x.id===currentEntryId);
-    if(idx===-1)throw new Error('找不到此筆記錄');
-    rawDb.entries[idx].userNotes=notes;
-    rawDb.lastUpdated=new Date().toISOString().slice(0,10);
-
-    // PUT 回去
-    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(rawDb,null,2))));
-    const putR=await fetch(apiUrl,{method:'PUT',headers,body:JSON.stringify({message:'📝 更新筆記：'+rawDb.entries[idx].title,content:encoded,sha})});
-    if(!putR.ok)throw new Error('推送失敗：'+putR.status);
-
-    // 更新本地 db
-    db[db.findIndex(x=>x.id===currentEntryId)].userNotes=notes;
+    const e0=db.find(x=>x.id===currentEntryId);
+    const newEntries=db.map(x=>x.id===currentEntryId?{...x,userNotes:notes}:x);
+    await _ghUpdateDb({entries:newEntries,trash:trashDb},'📝 更新筆記：'+(e0?e0.title:''));
+    db=newEntries;
+    _saveLocalCache(db,trashDb);
     statusEl.textContent='✓ 已儲存';
     statusEl.className='save-status ok';
     // 切回查看模式
