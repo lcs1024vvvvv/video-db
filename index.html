@@ -125,6 +125,20 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .cfilter-btn.active{border-color:#1c1c1e;background:#1c1c1e;color:#fff}
 .cfilter-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.12)}
 
+/* ── Moodboard 選取模式 ── */
+.select-btn.active{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
+.card{position:relative}
+.card.selectable{cursor:pointer}
+.card .mb-check{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.92);border:2px solid #c7c7cc;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:transparent;z-index:5;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.card.mb-selected{outline:3px solid #1c1c1e;outline-offset:-3px}
+.card.mb-selected .mb-check{background:#1c1c1e;border-color:#1c1c1e;color:#fff}
+.mb-toolbar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1c1c1e;color:#fff;border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;z-index:300;box-shadow:0 6px 24px rgba(0,0,0,.28);font-size:13px}
+.mb-toolbar .mb-count{font-weight:600;white-space:nowrap}
+.mb-toolbar button{border:none;border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.mb-toolbar .mb-clear{background:#3a3a3c;color:#fff}
+.mb-toolbar .mb-go{background:#fff;color:#1c1c1e}
+.mb-toolbar .mb-go:disabled{opacity:.4;cursor:not-allowed}
+
 @media(max-width:700px){
   .modal-middle{flex-direction:column}
   .modal-left{width:100%;border-right:none;border-bottom:1px solid #f2f2f7}
@@ -206,6 +220,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
     <button class="filter-btn" onclick="setFilter('婚攝',this)">婚攝</button>
     <button class="filter-btn" onclick="setFilter('教學',this)">教學</button>
     <span class="last-sync" id="lastSync"></span>
+    <button class="filter-btn select-btn" id="selectBtn" title="選取多支製作 Moodboard" onclick="toggleSelectMode()">📋 選取</button>
     <button class="trash-btn" title="垃圾桶" onclick="openTrash()">🗑<span class="trash-badge" id="trashBadge"></span></button>
     <button class="settings-btn" title="設定 GitHub Token" onclick="toggleTokenPanel()">⚙️</button>
   </div>
@@ -486,7 +501,8 @@ function renderCard(e){
     ?`<img class="card-thumb" src="${thumbSrc}" alt="" loading="lazy" onerror="this.outerHTML='<div class=card-thumb-ph>無縮圖</div>'">`
     :`<div class="card-thumb-ph">無縮圖</div>`;
   const tags=(e.tags||[]).slice(0,5).map(t=>`<span class="tag" onclick="event.stopPropagation();filterByTag('${t}')">${t}</span>`).join('');
-  return `<div class="card" onclick="openModal('${e.id}')">
+  return `<div class="card${selectMode?' selectable':''}${selectedIds.has(e.id)?' mb-selected':''}" onclick="cardClick(event,'${e.id}')">
+    ${selectMode?'<div class="mb-check">✓</div>':''}
     ${thumb}
     ${swatchStrip(e.palette)}
     <div class="card-body">
@@ -506,6 +522,88 @@ function render(){
   const f=getFiltered();
   document.getElementById('countBadge').textContent=db.length+' 個案例';
   document.getElementById('grid').innerHTML=f.length?f.map(renderCard).join(''):'<div class="empty-state">沒有符合的案例</div>';
+  const sb=document.getElementById('selectBtn');if(sb)sb.classList.toggle('active',selectMode);
+  updateMbToolbar();
+}
+
+// ── Moodboard 選取 / 匯出（純前端，零後端零成本）──────────────────────────
+let selectedIds=new Set();
+try{selectedIds=new Set(JSON.parse(sessionStorage.getItem('mbSel')||'[]'));}catch(e){}
+let selectMode=selectedIds.size>0;   // 重整同分頁時還原選取（sessionStorage）
+function persistSel(){try{sessionStorage.setItem('mbSel',JSON.stringify([...selectedIds]));}catch(e){}}
+function toggleSelectMode(){selectMode=!selectMode;render();}
+function cardClick(ev,id){
+  if(selectMode){ev.stopPropagation();toggleSelect(id,ev.currentTarget);}
+  else openModal(id);
+}
+function toggleSelect(id,cardEl){
+  if(selectedIds.has(id)){selectedIds.delete(id);if(cardEl)cardEl.classList.remove('mb-selected');}
+  else{selectedIds.add(id);if(cardEl)cardEl.classList.add('mb-selected');}
+  persistSel();updateMbToolbar();
+}
+function clearSelection(){selectedIds.clear();persistSel();render();}
+function updateMbToolbar(){
+  const tb=document.getElementById('mbToolbar');if(!tb)return;
+  if(selectMode){
+    tb.style.display='flex';
+    document.getElementById('mbCount').textContent='已選 '+selectedIds.size+' 支';
+    const go=document.getElementById('mbGo');if(go)go.disabled=selectedIds.size===0;
+  }else tb.style.display='none';
+}
+function mbEsc(s){return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function generateMoodboard(){
+  const items=[...selectedIds].map(id=>db.find(e=>e.id===id)).filter(Boolean);
+  if(!items.length){showToast('尚未選取任何影片');return;}
+  const w=window.open('','_blank');
+  if(!w){showToast('請允許彈出視窗以產生 Moodboard');return;}
+  const blocks=items.map(e=>{
+    const a=e.analysis||{};
+    const cover=e.cover?'data:image/jpeg;base64,'+e.cover:(e.thumbnail||'');
+    const sw=(e.palette||[]).map(c=>`<span style="background:${mbEsc(c)}"></span>`).join('');
+    const dims=[['風格色調',a.style],['運鏡畫面',a.camera],['剪輯節奏',a.edit],['音樂音效',a.music]]
+      .filter(x=>x[1]).map(x=>`<div class="dim"><b>${x[0]}</b>${mbEsc(x[1])}</div>`).join('');
+    const meta=[e.category,e.duration,e.year].filter(Boolean).map(mbEsc).join(' · ');
+    return `<section class="item ${e.orientation==='portrait'?'portrait':''}">
+      <div class="cov">${cover?`<img src="${cover}">`:''}${sw?`<div class="sw">${sw}</div>`:''}</div>
+      <div class="info"><h2>${mbEsc(e.title||'（無標題）')}</h2>
+      <div class="cr">${mbEsc(e.creator||'')}${meta?(e.creator?' · ':'')+meta:''}</div>
+      ${e.userNotes?`<div class="un">✏️ ${mbEsc(e.userNotes)}</div>`:''}
+      <div class="dims">${dims}</div>
+      <a class="lnk" href="${mbEsc(e.url||'')}">${mbEsc(e.url||'')}</a></div>
+    </section>`;
+  }).join('');
+  const html=`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Moodboard 提案</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;background:#f2f2f7;color:#1c1c1e;padding:32px}
+.wrap{max-width:900px;margin:0 auto}
+.hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:22px}
+h1{font-size:26px;font-weight:800;outline:none}
+h1:focus{background:#fff;border-radius:6px;padding:2px 6px;box-shadow:0 0 0 2px #007aff}
+.sub{font-size:12px;color:#8e8e93;margin-top:5px}
+.print-btn{border:none;background:#1c1c1e;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0}
+.item{display:flex;gap:18px;background:#fff;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);page-break-inside:avoid;break-inside:avoid}
+.cov{flex-shrink:0;width:280px}
+.item.portrait .cov{width:170px}
+.cov img{width:100%;border-radius:10px;display:block}
+.sw{display:flex;height:8px;margin-top:6px;border-radius:4px;overflow:hidden}
+.sw span{flex:1}
+.info{flex:1;min-width:0}
+h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.cr{font-size:12px;color:#8e8e93;margin-bottom:8px}
+.un{font-size:12px;color:#636366;background:#fffbea;border-radius:6px;padding:6px 8px;margin-bottom:8px;white-space:pre-wrap}
+.dims{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-bottom:10px}
+.dim{font-size:11.5px;line-height:1.5;color:#3a3a3c}
+.dim b{display:block;color:#1c1c1e;font-size:10px;letter-spacing:.4px;margin-bottom:1px}
+.lnk{font-size:11px;color:#007aff;word-break:break-all;text-decoration:none}
+@media print{body{background:#fff;padding:0}.print-btn{display:none}.item{box-shadow:none;border:1px solid #e5e5ea}}
+@media(max-width:640px){.item,.item.portrait{flex-direction:column}.cov,.item.portrait .cov{width:100%}.dims{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<div class="hd"><div><h1 contenteditable="true">影像參考提案</h1><div class="sub">共 ${items.length} 支 · ${new Date().toLocaleDateString('zh-TW')} · 點標題可編輯</div></div>
+<button class="print-btn" onclick="window.print()">🖨 列印 / 存 PDF</button></div>
+${blocks}
+</div></body></html>`;
+  w.document.open();w.document.write(html);w.document.close();
 }
 
 function showToast(msg){
@@ -931,5 +1029,10 @@ function filterByTag(tag){
   render();
 }
 </script>
+<div class="mb-toolbar" id="mbToolbar" style="display:none">
+  <span class="mb-count" id="mbCount">已選 0 支</span>
+  <button class="mb-clear" onclick="clearSelection()">清除</button>
+  <button class="mb-go" id="mbGo" onclick="generateMoodboard()">產生 Moodboard →</button>
+</div>
 </body>
 </html>
