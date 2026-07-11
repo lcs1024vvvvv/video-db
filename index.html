@@ -109,6 +109,22 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .related-title{font-size:11px;line-height:1.35;color:#1c1c1e;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .related-creator{font-size:10px;color:#aeaeb2;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+/* ── 色彩指紋（色票）── */
+.swatch-strip{display:flex;height:6px;width:100%}
+.swatch-strip .swatch-cell{flex:1}
+.palette-section{padding:10px 16px 14px;border-top:1px solid #f2f2f7;flex-shrink:0}
+.palette-label{font-size:10px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.palette-row{display:flex;gap:8px;flex-wrap:wrap}
+.mswatch{width:40px;height:40px;border-radius:8px;cursor:pointer;border:1px solid rgba(0,0,0,.06);position:relative;transition:transform .1s}
+.mswatch:hover{transform:scale(1.08)}
+.mswatch .mswatch-hex{position:absolute;left:50%;top:-22px;transform:translateX(-50%);background:#1c1c1e;color:#fff;font-size:9px;font-weight:600;padding:2px 5px;border-radius:4px;opacity:0;pointer-events:none;white-space:nowrap;transition:opacity .12s}
+.mswatch:hover .mswatch-hex{opacity:1}
+/* 色系篩選按鈕 */
+.color-filter-bar{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px;width:100%}
+.cfilter-btn{display:flex;align-items:center;gap:5px;padding:4px 11px 4px 8px;border:1.5px solid #e5e5ea;border-radius:20px;background:#fff;font-size:11px;cursor:pointer;font-weight:500;transition:all .15s}
+.cfilter-btn.active{border-color:#1c1c1e;background:#1c1c1e;color:#fff}
+.cfilter-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.12)}
+
 @media(max-width:700px){
   .modal-middle{flex-direction:column}
   .modal-left{width:100%;border-right:none;border-bottom:1px solid #f2f2f7}
@@ -193,6 +209,17 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
     <button class="trash-btn" title="垃圾桶" onclick="openTrash()">🗑<span class="trash-badge" id="trashBadge"></span></button>
     <button class="settings-btn" title="設定 GitHub Token" onclick="toggleTokenPanel()">⚙️</button>
   </div>
+  <div class="color-filter-bar" id="colorFilterBar">
+    <button class="cfilter-btn active" onclick="setColorFilter('all',this)">全部色系</button>
+    <button class="cfilter-btn" onclick="setColorFilter('warm',this)"><span class="cfilter-dot" style="background:#F4934E"></span>暖橘</button>
+    <button class="cfilter-btn" onclick="setColorFilter('redpink',this)"><span class="cfilter-dot" style="background:#E85D75"></span>紅粉</button>
+    <button class="cfilter-btn" onclick="setColorFilter('yellow',this)"><span class="cfilter-dot" style="background:#F2C744"></span>黃</button>
+    <button class="cfilter-btn" onclick="setColorFilter('green',this)"><span class="cfilter-dot" style="background:#4CAF6E"></span>綠</button>
+    <button class="cfilter-btn" onclick="setColorFilter('cyan',this)"><span class="cfilter-dot" style="background:#3BA7C4"></span>青藍</button>
+    <button class="cfilter-btn" onclick="setColorFilter('bluepurple',this)"><span class="cfilter-dot" style="background:#6C6CCB"></span>藍紫</button>
+    <button class="cfilter-btn" onclick="setColorFilter('mono',this)"><span class="cfilter-dot" style="background:linear-gradient(135deg,#111 50%,#eee 50%)"></span>黑白灰</button>
+    <button class="cfilter-btn" onclick="setColorFilter('colorful',this)"><span class="cfilter-dot" style="background:conic-gradient(#e85d75,#f2c744,#4caf6e,#3ba7c4,#6c6ccb,#e85d75)"></span>繽紛</button>
+  </div>
 </header>
 
 <!-- 垃圾桶 Modal -->
@@ -244,6 +271,10 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
         <div class="analysis-section" id="mAnalysis"></div>
         <div class="notes-section" id="mNotes" style="display:none"></div>
         <div class="modal-tags" id="mTags" style="display:flex;flex-wrap:wrap;gap:4px;padding-top:6px"></div>
+        <div id="mPaletteWrap" style="display:none;margin-top:12px">
+          <div class="palette-label">🎨 色票（點擊複製 hex）</div>
+          <div class="palette-row" id="mPalette"></div>
+        </div>
       </div>
     </div>
 
@@ -286,6 +317,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 <script>
 let db=[];
 let currentFilter='all';
+let currentColorFilter='all';
 let currentSearch='';
 let currentEntryId=null;
 
@@ -342,6 +374,54 @@ function setFilter(f,btn){
   render();
 }
 
+function setColorFilter(c,btn){
+  currentColorFilter=c;
+  document.querySelectorAll('.cfilter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+// ── 色系分類（純前端，依 palette 的 HSV）──
+function hexToHsv(hex){
+  hex=(hex||'').replace('#','');
+  if(hex.length!==6)return null;
+  const r=parseInt(hex.slice(0,2),16)/255,g=parseInt(hex.slice(2,4),16)/255,b=parseInt(hex.slice(4,6),16)/255;
+  if([r,g,b].some(isNaN))return null;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
+  let h=0;
+  if(d!==0){
+    if(mx===r)h=(((g-b)/d)%6+6)%6;
+    else if(mx===g)h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h*=60;
+  }
+  return {h,s:mx===0?0:d/mx,v:mx};
+}
+function hueBucket(h){
+  if(h>=330||h<15)return 'redpink';
+  if(h<45)return 'warm';
+  if(h<70)return 'yellow';
+  if(h<160)return 'green';
+  if(h<210)return 'cyan';
+  if(h<290)return 'bluepurple';
+  return 'redpink';           // 290–330 洋紅/粉紫 → 紅粉
+}
+// 回傳一個 entry 所屬的色系集合（供篩選比對）
+function entryColorSet(e){
+  const pal=e.palette||[];
+  if(!pal.length)return new Set();
+  const buckets=new Set();
+  for(const hex of pal){
+    const c=hexToHsv(hex);
+    if(c&&c.s>=0.15&&c.v>=0.15)buckets.add(hueBucket(c.h));
+  }
+  if(buckets.size>3)return new Set(['colorful']);   // 色相跨太多區 → 繽紛
+  const dom=hexToHsv(pal[0]);
+  if(!dom||dom.s<0.12)buckets.add('mono');          // 主色低飽和 → 也算黑白灰
+  if(buckets.size===0)buckets.add('mono');
+  return buckets;
+}
+
 function scoreEntry(e,q){
   if(!q)return 0;
   let s=0;
@@ -368,7 +448,8 @@ function getFiltered(){
     // 教學影片只在「主動搜尋教學」或「點教學按鈕」時才顯示
     if(e.category==='教學'&&currentFilter!=='教學'&&!q.includes('教學'))return false;
     const mS=!q||scoreEntry(e,q)>0;
-    return mF&&mS;
+    const mC=currentColorFilter==='all'||entryColorSet(e).has(currentColorFilter);
+    return mF&&mS&&mC;
   });
   // 有搜尋：按相關度排序；無搜尋：按存入時間降序（entry_id 含毫秒 timestamp）
   if(q)return results.slice().sort((a,b)=>scoreEntry(b,q)-scoreEntry(a,q));
@@ -377,6 +458,22 @@ function getFiltered(){
     const tb=parseInt((b.id||'').replace('entry_',''))||0;
     return tb-ta;
   });
+}
+
+function swatchStrip(pal){
+  if(!pal||!pal.length)return '';
+  return '<div class="swatch-strip">'+pal.map(c=>`<span class="swatch-cell" style="background:${c}"></span>`).join('')+'</div>';
+}
+
+function copyHex(hex){
+  const done=()=>showToast('已複製 '+hex);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(hex).then(done).catch(()=>done());
+  }else{
+    const ta=document.createElement('textarea');ta.value=hex;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');}catch(e){}
+    document.body.removeChild(ta);done();
+  }
 }
 
 function renderCard(e){
@@ -391,6 +488,7 @@ function renderCard(e){
   const tags=(e.tags||[]).slice(0,5).map(t=>`<span class="tag" onclick="event.stopPropagation();filterByTag('${t}')">${t}</span>`).join('');
   return `<div class="card" onclick="openModal('${e.id}')">
     ${thumb}
+    ${swatchStrip(e.palette)}
     <div class="card-body">
       <div class="card-meta">
         <span class="badge ${pcls(e.platform)}">${plabel(e.platform)}</span>
@@ -592,6 +690,19 @@ function openModal(id){
   // footer
   document.getElementById('mTags').innerHTML=(e.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
   document.getElementById('mWatch').href=e.url;
+
+  // 色票（放大顯示，hover 顯示 hex、點擊複製）
+  const palWrap=document.getElementById('mPaletteWrap');
+  const palRow=document.getElementById('mPalette');
+  const pal=e.palette||[];
+  if(pal.length){
+    palWrap.style.display='block';
+    palRow.innerHTML=pal.map(c=>
+      `<span class="mswatch" style="background:${c}" onclick="copyHex('${c}')"><span class="mswatch-hex">${c}</span></span>`
+    ).join('');
+  }else{
+    palWrap.style.display='none';palRow.innerHTML='';
+  }
 
   // 風格相近的收藏（語意相似推薦）
   renderRelated(e);
