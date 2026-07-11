@@ -99,6 +99,16 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .frames-grid.portrait{display:flex;flex-direction:row;gap:5px;overflow-x:auto;padding-bottom:4px}
 .frames-grid.portrait .frame-img{flex-shrink:0;width:auto;height:260px;aspect-ratio:9/16;object-fit:cover}
 
+/* ── 風格相近的收藏 ── */
+.related-section{padding:12px 16px 16px;border-top:1px solid #f2f2f7;flex-shrink:0}
+.related-label{font-size:10px;font-weight:700;color:#aeaeb2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.related-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.related-card{flex-shrink:0;width:120px;cursor:pointer;transition:transform .12s}
+.related-card:hover{transform:translateY(-2px)}
+.related-thumb{width:120px;height:68px;object-fit:cover;border-radius:8px;background:#e5e5ea;display:block}
+.related-title{font-size:11px;line-height:1.35;color:#1c1c1e;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.related-creator{font-size:10px;color:#aeaeb2;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 @media(max-width:700px){
   .modal-middle{flex-direction:column}
   .modal-left{width:100%;border-right:none;border-bottom:1px solid #f2f2f7}
@@ -262,6 +272,12 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
     <div class="frames-section" id="mFramesSec" style="display:none">
       <div class="frames-label">影片畫格<button id="coverPickBtn" class="cover-pick-btn" onclick="toggleCoverPick()">＋ 設為封面</button></div>
       <div class="frames-grid" id="mFrames"></div>
+    </div>
+
+    <!-- 風格相近的收藏（語意相似推薦，來自 entry.related）-->
+    <div class="related-section" id="mRelatedSec" style="display:none">
+      <div class="related-label">🎬 風格相近的收藏</div>
+      <div class="related-row" id="mRelated"></div>
     </div>
 
   </div>
@@ -469,6 +485,38 @@ function loadFrames(id, isPortrait){
     .catch(()=>{if(currentEntryId===id)fGrid.innerHTML='<div style="padding:18px 4px;color:#aeaeb2;font-size:12px">畫格載入失敗</div>';});
 }
 
+function renderRelated(e){
+  const sec=document.getElementById('mRelatedSec');
+  const row=document.getElementById('mRelated');
+  row.innerHTML='';
+  // entry.related 是語意相似的 entry id 清單；只渲染仍存在於 db 的
+  const ids=(e.related||[]).filter(rid=>rid!==e.id);
+  const items=ids.map(rid=>db.find(x=>x.id===rid)).filter(Boolean);
+  if(!items.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  items.forEach(r=>{
+    const card=document.createElement('div');
+    card.className='related-card';
+    card.onclick=()=>openModal(r.id);
+    const img=document.createElement('img');
+    img.className='related-thumb';
+    img.loading='lazy';
+    img.src=r.cover?('data:image/jpeg;base64,'+r.cover):(r.thumbnail||'');
+    const title=document.createElement('div');
+    title.className='related-title';
+    title.textContent=r.title||'（無標題）';
+    card.appendChild(img);
+    card.appendChild(title);
+    if(r.creator){
+      const cr=document.createElement('div');
+      cr.className='related-creator';
+      cr.textContent=r.creator;
+      card.appendChild(cr);
+    }
+    row.appendChild(card);
+  });
+}
+
 function openModal(id){
   const e=db.find(x=>x.id===id);
   if(!e)return;
@@ -544,6 +592,9 @@ function openModal(id){
   // footer
   document.getElementById('mTags').innerHTML=(e.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
   document.getElementById('mWatch').href=e.url;
+
+  // 風格相近的收藏（語意相似推薦）
+  renderRelated(e);
 
   document.getElementById('overlay').classList.add('open');
   document.body.style.overflow='hidden';
