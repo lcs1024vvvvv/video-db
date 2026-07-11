@@ -302,6 +302,9 @@ fetch('data.json?t='+Date.now())
     document.getElementById('lastSync').textContent='最後更新：'+(data.lastUpdated||'');
     _updateTrashBadge();
     render();
+    // 深連結：URL hash 對應 entry id 時自動開啟該筆（Telegram「查看」按鈕用）
+    const hashId=(location.hash||'').replace('#','');
+    if(hashId&&db.find(x=>x.id===hashId))openModal(hashId);
   })
   .catch(()=>{
     // 網路失敗時用本地快取
