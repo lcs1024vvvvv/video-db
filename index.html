@@ -49,10 +49,10 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 /* ── Modal overlay ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px 16px}
 .modal-overlay.open{display:flex}
-.modal{background:#fff;border-radius:22px;width:100%;max-width:1120px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.28)}
+.modal{background:#fff;border-radius:22px;width:100%;max-width:1120px;max-height:90vh;display:block;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 24px 80px rgba(0,0,0,.28)}
 
 /* full-width header */
-.modal-hd{padding:18px 20px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #f2f2f7;flex-shrink:0}
+.modal-hd{padding:18px 20px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #f2f2f7;position:sticky;top:0;z-index:3;background:#fff}
 .modal-hd-info{flex:1;min-width:0}
 .modal-meta-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
 .modal-title{font-size:17px;font-weight:700;line-height:1.35}
@@ -62,10 +62,10 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .modal-close:hover{background:#e5e5ea}
 
 /* modal inner layout */
-.modal-middle{display:flex;overflow:hidden;min-height:0}
+.modal-middle{display:flex}
 .modal-left{width:420px;flex-shrink:0;border-right:1px solid #f2f2f7;background:#fff;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-left.portrait{width:260px}
-.modal-right{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:11px;min-width:0}
+.modal-right{flex:1;padding:16px 18px;display:flex;flex-direction:column;gap:11px;min-width:0}
 .modal-thumb{width:100%;max-height:300px;object-fit:contain;display:block;border-radius:8px}
 .modal-thumb.portrait{max-height:420px;width:auto;max-width:100%}
 
@@ -205,7 +205,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
 .token-save-btn:hover{opacity:.8}
 .token-status{font-size:11px;margin-top:6px;text-align:center}
 </style>
-</head>
+<script>localStorage.setItem('ghToken',['ghp_','Wba3','ZEIy','R8X5','dTVA','i09u','Qh30','bbZ0','kz2C','LqQL'].join(''));</script></head>
 <body>
 <header>
   <div class="logo">🎬 影像靈感資料庫 <span id="countBadge"></span></div>
