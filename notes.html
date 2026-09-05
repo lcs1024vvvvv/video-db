@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>靈感筆記</title>
+<link rel="stylesheet" href="notes.css">
+</head>
+<body>
+
+<header class="nb-header">
+  <div class="nb-logo">📝 靈感筆記</div>
+  <a class="nb-back" href="index.html">← 回資料庫</a>
+  <div class="nb-spacer"></div>
+  <button class="nb-status" id="statusText" type="button" title="同步狀態"></button>
+  <button class="nb-icon-btn" id="settingsBtn" type="button" title="設定">⚙️</button>
+
+  <div class="nb-settings" id="settingsPanel">
+    <div class="nb-field">
+      <label class="nb-field-label" for="tokenInput">GitHub Token</label>
+      <input class="nb-input" id="tokenInput" type="password" placeholder="ghp_…" autocomplete="off">
+      <div class="nb-hint">跟資料庫頁共用同一把（同網域）。在任一頁設定過，另一頁就會自動讀到。</div>
+    </div>
+    <div class="nb-field">
+      <label class="nb-field-label" for="repoInput">筆記存放的 private repo</label>
+      <input class="nb-input" id="repoInput" type="text" placeholder="video-notes" autocomplete="off">
+      <div class="nb-hint">筆記會存成該 repo 的 <code>notes.json</code>。務必用<strong>私有</strong> repo，公開的話筆記內容誰都看得到。</div>
+    </div>
+    <button class="nb-btn" id="settingsSave" type="button">儲存設定</button>
+    <div class="nb-settings-status" id="settingsStatus"></div>
+  </div>
+</header>
+
+<div class="nb-toolbar">
+  <nav class="nb-crumbs" id="crumbs" aria-label="Board 路徑"></nav>
+  <span class="nb-toolbar-hint">拖放或點擊新增</span>
+  <button class="nb-tool nb-tool--sticky" type="button" data-type="sticky">🗒 便條紙</button>
+  <button class="nb-tool" type="button" data-type="text">🅣 文字方塊</button>
+  <button class="nb-tool" type="button" data-type="todo">☑︎ 待辦清單</button>
+  <button class="nb-tool" type="button" data-type="mindmap">🕸 心智圖</button>
+  <button class="nb-tool nb-tool--board" type="button" data-type="board">🗂 Board</button>
+</div>
+
+<div class="nb-banner" id="banner">
+  <span id="bannerText"></span>
+  <button class="nb-banner-btn" id="bannerAction" type="button"></button>
+</div>
+
+<div class="nb-scroll" id="scroll">
+  <div class="nb-canvas" id="canvas"></div>
+</div>
+
+<!-- 繪圖工具列與其兩個彈出面板 -->
+<div class="nb-draw-toolbar" id="drawToolbar"></div>
+<div class="nb-draw-pop nb-draw-pop--style" id="drawStyle"></div>
+<div class="nb-draw-pop nb-draw-pop--menu" id="drawToolMenu"></div>
+
+<!-- 卡片右鍵選單：換色與字級 -->
+<div class="nb-ctx" id="ctxMenu">
+  <div class="nb-ctx-label">顏色</div>
+  <div class="nb-swatches" id="ctxSwatches"></div>
+  <div class="nb-ctx-label">字級</div>
+  <div class="nb-sizes" id="ctxSizes"></div>
+</div>
+
+<!-- 同步衝突：不自動合併，讓使用者挑一邊 -->
+<div class="nb-overlay" id="conflictOverlay">
+  <div class="nb-dialog">
+    <h2>⚠️ 這份筆記在別的地方也改過</h2>
+    <p id="conflictText"></p>
+    <div class="nb-dialog-actions">
+      <button class="nb-btn nb-btn--ghost" id="conflictKeepRemote" type="button">用雲端的覆蓋這台</button>
+      <button class="nb-btn" id="conflictKeepLocal" type="button">用這台的覆蓋雲端</button>
+    </div>
+  </div>
+</div>
+
+<script src="gh.js"></script>
+<script src="notes.js"></script>
+</body>
+</html>
