@@ -1,0 +1,193 @@
+/* 靈感筆記板。所有選擇器一律用 nb- 前綴，避免哪天跟 index.html 的樣式混用時撞名。 */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f2f2f7;color:#1c1c1e;overflow:hidden;display:flex;flex-direction:column}
+/* header / 工具列 / 提示條固定高度，畫布吃掉剩下的空間；用 flex 而不是寫死 top，
+   提示條出現或工具列換行時才不會把畫布頂掉或蓋住。 */
+.nb-header,.nb-toolbar,.nb-banner{flex-shrink:0}
+
+/* ── Header ── */
+.nb-header{background:#fff;border-bottom:1px solid #e5e5ea;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;z-index:300}
+.nb-logo{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.nb-back{font-size:12px;color:#007aff;text-decoration:none;padding:5px 12px;border-radius:20px;border:1.5px solid #d6e6ff;white-space:nowrap;transition:background .15s}
+.nb-back:hover{background:#f0f7ff}
+.nb-spacer{flex:1}
+.nb-status{font-size:11px;color:#8e8e93;white-space:nowrap;background:none;border:none;cursor:default;font-family:inherit}
+.nb-status.nb-status--err{color:#ff3b30;cursor:pointer;text-decoration:underline}
+.nb-status.nb-status--ok{color:#34c759}
+.nb-icon-btn{width:32px;height:32px;border:1px solid #e5e5ea;border-radius:10px;background:#fff;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.nb-icon-btn:hover{background:#f2f2f7}
+
+/* ── 工具列 ── */
+.nb-toolbar{background:#fff;border-bottom:1px solid #e5e5ea;padding:8px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:relative;z-index:250}
+.nb-toolbar-hint{font-size:11px;color:#c7c7cc;margin-right:2px;user-select:none;white-space:nowrap}
+.nb-tool{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:10px;border:1.5px solid #e5e5ea;background:#fff;font-size:12px;font-weight:500;color:#3a3a3c;cursor:grab;white-space:nowrap;user-select:none;font-family:inherit;transition:background .15s}
+.nb-tool:active{cursor:grabbing}
+.nb-tool:hover{background:#f2f2f7}
+.nb-tool--sticky{border-color:#f5e6a3;background:#fffdf0;color:#8a6d1f}
+.nb-tool--sticky:hover{background:#fdf6d8}
+
+/* 拖曳到畫布時跟著游標的預覽方塊 */
+.nb-ghost{position:fixed;pointer-events:none;z-index:9000;border-radius:12px;border:2px dashed #007aff;background:rgba(0,122,255,.08);opacity:.85}
+
+/* ── 畫布 ── */
+.nb-scroll{flex:1;min-height:0;position:relative;overflow:auto;background:#f2f2f7}
+.nb-canvas{position:relative;background-image:radial-gradient(#d8d8dd 1px,transparent 1px);background-size:24px 24px}
+.nb-guide{position:absolute;background:#ff3b30;pointer-events:none;z-index:8000}
+.nb-guide--v{width:1px;top:0;bottom:0}
+.nb-guide--h{height:1px;left:0;right:0}
+
+/* ── 卡片 ── */
+.nb-card{position:absolute;border-radius:12px;border:1px solid rgba(0,0,0,.1);box-shadow:0 2px 10px rgba(0,0,0,.07);display:flex;flex-direction:column;overflow:hidden}
+.nb-card--dragging{box-shadow:0 12px 32px rgba(0,0,0,.18);opacity:.95}
+.nb-hd{display:flex;align-items:center;gap:4px;padding:4px 4px 4px 8px;cursor:grab;background:rgba(0,0,0,.035);border-bottom:1px solid rgba(0,0,0,.06);flex-shrink:0;min-height:28px}
+.nb-hd:active{cursor:grabbing}
+.nb-title{flex:1;min-width:0;border:none;background:transparent;font-size:12px;font-weight:600;color:#1c1c1e;outline:none;font-family:inherit;padding:2px 0}
+.nb-title::placeholder{color:#b0b0b5;font-weight:400}
+.nb-title-text{flex:1;min-width:0;font-size:12px;font-weight:600;color:#1c1c1e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 0;user-select:none}
+.nb-title-text--empty{color:#b0b0b5;font-weight:400}
+.nb-hd-btn{width:20px;height:20px;border:none;background:transparent;border-radius:5px;cursor:pointer;color:#8e8e93;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0;transition:opacity .15s,background .15s}
+.nb-card:hover .nb-hd-btn{opacity:1}
+.nb-hd-btn:hover{background:rgba(0,0,0,.08);color:#1c1c1e}
+.nb-hd-btn--del:hover{background:#ffe5e3;color:#ff3b30}
+
+/* 刪除的行內確認（不用 window.confirm） */
+.nb-hd--confirm{background:#ffe5e3;border-bottom-color:#ffc9c4}
+.nb-confirm-text{flex:1;font-size:11px;font-weight:600;color:#c62d1f;white-space:nowrap}
+.nb-confirm-btn{border:none;border-radius:5px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0}
+.nb-confirm-btn--yes{background:#ff3b30;color:#fff}
+.nb-confirm-btn--no{background:rgba(0,0,0,.08);color:#3a3a3c}
+
+.nb-body{flex:1;min-height:0;overflow:auto;padding:8px 10px}
+.nb-ta{width:100%;height:100%;border:none;background:transparent;resize:none;outline:none;font-family:inherit;line-height:1.55;color:#1c1c1e}
+.nb-ta::placeholder{color:#c7c7cc}
+
+/* 待辦清單 */
+.nb-todos{display:flex;flex-direction:column;gap:2px}
+.nb-todo{display:flex;align-items:center;gap:7px}
+.nb-todo input[type=checkbox]{width:14px;height:14px;flex-shrink:0;accent-color:#34c759;cursor:pointer}
+.nb-todo-text{flex:1;min-width:0;border:none;background:transparent;outline:none;font-family:inherit;line-height:1.6;color:#1c1c1e;padding:1px 0}
+.nb-todo-text::placeholder{color:#c7c7cc}
+.nb-todo--done .nb-todo-text{text-decoration:line-through;color:#b0b0b5}
+.nb-todo-del{width:18px;height:18px;border:none;background:transparent;color:#c7c7cc;cursor:pointer;border-radius:4px;font-size:11px;line-height:1;flex-shrink:0;opacity:0}
+.nb-todo:hover .nb-todo-del{opacity:1}
+.nb-todo-del:hover{background:#ffe5e3;color:#ff3b30}
+.nb-todo-add{margin-top:6px;border:none;background:transparent;color:#8e8e93;font-size:11px;cursor:pointer;font-family:inherit;padding:2px 0}
+.nb-todo-add:hover{color:#007aff}
+
+.nb-rz{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,rgba(0,0,0,.18) 50%);border-bottom-right-radius:12px}
+
+/* ── 右鍵選單 ── */
+.nb-ctx{position:fixed;z-index:9500;background:#fff;border:1px solid #e5e5ea;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.16);padding:10px;display:none}
+.nb-ctx.nb-ctx--open{display:block}
+.nb-ctx-label{font-size:10px;color:#8e8e93;font-weight:600;margin-bottom:6px}
+.nb-swatches{display:flex;gap:6px;margin-bottom:10px}
+.nb-swatch{width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(0,0,0,.12);cursor:pointer;padding:0}
+.nb-swatch--active{outline:2px solid #007aff;outline-offset:1px}
+.nb-sizes{display:flex;gap:6px}
+.nb-size{flex:1;border:1.5px solid #e5e5ea;background:#fff;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;color:#3a3a3c}
+.nb-size--active{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
+
+/* ── 設定面板 ── */
+.nb-settings{position:absolute;top:52px;right:20px;width:290px;background:#fff;border:1px solid #e5e5ea;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.16);padding:16px;display:none;z-index:400}
+.nb-settings.nb-settings--open{display:block}
+.nb-field{margin-bottom:12px}
+.nb-field-label{display:block;font-size:11px;font-weight:600;color:#3a3a3c;margin-bottom:5px}
+.nb-input{width:100%;padding:7px 10px;border:1px solid #e5e5ea;border-radius:8px;font-size:12px;outline:none;font-family:inherit;background:#f2f2f7}
+.nb-input:focus{border-color:#007aff;background:#fff}
+.nb-hint{font-size:10px;color:#8e8e93;margin-top:5px;line-height:1.5}
+.nb-btn{width:100%;padding:8px;border:none;border-radius:8px;background:#007aff;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.nb-btn:hover{opacity:.85}
+.nb-settings-status{font-size:11px;margin-top:8px;text-align:center}
+
+/* ── 提示條 ── */
+.nb-banner{display:none;align-items:center;gap:10px;padding:8px 20px;background:#fff8e5;border-bottom:1px solid #f5e6a3;font-size:12px;color:#8a6d1f;position:relative;z-index:240}
+.nb-banner.nb-banner--open{display:flex}
+.nb-banner-btn{border:1.5px solid #e0cd85;background:#fff;border-radius:8px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:#8a6d1f;white-space:nowrap}
+
+/* ── 衝突對話框 ── */
+.nb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9800;display:none;align-items:center;justify-content:center;padding:20px}
+.nb-overlay.nb-overlay--open{display:flex}
+.nb-dialog{background:#fff;border-radius:16px;padding:22px;max-width:400px;width:100%}
+.nb-dialog h2{font-size:15px;margin-bottom:10px}
+.nb-dialog p{font-size:12px;color:#3a3a3c;line-height:1.7;margin-bottom:16px}
+.nb-dialog-actions{display:flex;gap:8px}
+.nb-dialog-actions .nb-btn{flex:1}
+.nb-btn--ghost{background:#f2f2f7;color:#3a3a3c}
+
+/* ── 麵包屑（Board 路徑） ── */
+.nb-crumbs{display:flex;align-items:center;gap:2px;min-width:0;max-width:45%;padding-right:10px;margin-right:2px;border-right:1px solid #e5e5ea;overflow:hidden}
+.nb-crumb{border:none;background:transparent;font-family:inherit;font-size:11px;color:#8e8e93;padding:3px 6px;border-radius:6px;cursor:pointer;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-crumb:hover{background:#f2f2f7;color:#1c1c1e}
+.nb-crumb--current{color:#1c1c1e;font-weight:600}
+.nb-crumb-caret{color:#d1d1d6;font-size:11px;flex-shrink:0}
+.nb-tool--board{border-color:#e6d6a6;background:#fdfaf0;color:#8a6d1f}
+.nb-tool--board:hover{background:#f8f1dc}
+
+/* ── Board 卡片 ── */
+.nb-board{background:transparent;border:none;box-shadow:none;overflow:visible;user-select:none}
+.nb-board-tile{position:relative;width:128px;height:128px;margin:0 auto;border-radius:22px;box-shadow:0 2px 8px rgba(15,23,42,.12);display:flex;align-items:center;justify-content:center;cursor:grab}
+.nb-board-tile:active{cursor:grabbing}
+.nb-board-icon{font-size:46px;line-height:1;opacity:.72}
+.nb-board-del{position:absolute;right:7px;top:7px;width:24px;height:24px;border:none;border-radius:50%;background:rgba(255,255,255,.88);color:#8e8e93;font-size:11px;line-height:1;cursor:pointer;opacity:0;transition:opacity .15s;display:flex;align-items:center;justify-content:center}
+.nb-board:hover .nb-board-del{opacity:1}
+.nb-board-del:hover{color:#ff3b30}
+.nb-board-confirm{position:absolute;inset:0;border-radius:22px;background:rgba(255,255,255,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px;cursor:default}
+.nb-board-confirm-text{font-size:11px;font-weight:600;color:#c62d1f;text-align:center;line-height:1.5}
+.nb-board-confirm-actions{display:flex;gap:6px}
+.nb-board-label{margin-top:9px;text-align:center}
+.nb-board-name{font-size:13px;font-weight:600;color:#1c1c1e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.nb-board-count{margin-top:2px;font-size:11px;color:#aeaeb2}
+.nb-board-rename{width:100%;border:1.5px solid #a5b4fc;border-radius:6px;padding:2px 6px;text-align:center;font-size:13px;font-weight:600;font-family:inherit;outline:none;background:#fff}
+
+/* ── 心智圖 ── */
+.nb-body--mm{padding:0;overflow:hidden}
+.nb-mm{position:relative;width:100%;height:100%;overflow:hidden}
+.nb-mm-edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.nb-mm-node{position:absolute;width:120px;height:32px;display:flex;align-items:center;border-radius:6px;border:1.5px solid #d1d5db;background:#fff;cursor:grab;z-index:1}
+.nb-mm-node:hover{box-shadow:0 2px 8px rgba(0,0,0,.13);z-index:10}
+.nb-mm-node:active{cursor:grabbing}
+.nb-mm-node--root{border:2px solid #f97316;background:#fff7ed}
+.nb-mm-text{flex:1;min-width:0;padding:0 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#374151;user-select:none}
+.nb-mm-node--root .nb-mm-text{color:#c2410c}
+.nb-mm-input{width:100%;height:100%;border:2px solid #6366f1;border-radius:6px;padding:0 8px;outline:none;background:#fff;font-family:inherit}
+.nb-mm-btn{position:absolute;border:none;padding:0;cursor:pointer;color:#fff;display:none;align-items:center;justify-content:center;border-radius:50%;z-index:20}
+.nb-mm-node:hover .nb-mm-btn{display:flex}
+.nb-mm-btn--add{right:-22px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:#6366f1;font-size:13px;line-height:1}
+.nb-mm-btn--del{top:-7px;right:-7px;width:16px;height:16px;background:#ef4444;font-size:10px;line-height:1}
+
+/* ── 繪圖層 ── */
+.nb-draw-layer{position:absolute;left:0;top:0;z-index:0}
+/* 繪圖層在卡片「下方」（跟探索系統原版同樣的圖層順序，等於卡片底下的那張紙）。
+   進入繪圖模式時卡片同時做兩件事：不吃滑鼠事件（筆畫才過得去），以及變半透明
+   ——否則在卡片上方拖曳會畫出一筆被完全遮住的線，看起來像整個功能壞掉。 */
+.nb-card{transition:opacity .15s}
+.nb-canvas--draw .nb-card{pointer-events:none;opacity:.45}
+
+.nb-draw-toolbar{position:fixed;left:12px;top:50%;transform:translateY(-50%);z-index:200;display:flex;flex-direction:column;gap:2px;padding:5px;border-radius:14px;border:1px solid #e5e5ea;background:rgba(255,255,255,.96);box-shadow:0 8px 30px rgba(0,0,0,.14);backdrop-filter:blur(8px)}
+.nb-draw-btn{position:relative;width:34px;height:34px;border:none;border-radius:9px;background:transparent;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;color:#3a3a3c;transition:background .15s}
+.nb-draw-btn:hover{background:#f2f2f7}
+.nb-draw-btn:disabled{opacity:.25;cursor:default}
+.nb-draw-btn:disabled:hover{background:transparent}
+.nb-draw-btn--active{background:#e8f1ff;box-shadow:inset 0 0 0 1.5px #b7d5ff}
+.nb-draw-btn--danger:hover{background:#ffe5e3}
+.nb-draw-sep{height:1px;margin:3px 4px;background:#e5e5ea}
+.nb-draw-dot{position:absolute;right:4px;bottom:4px;width:9px;height:9px;border-radius:50%;border:1px solid #fff;box-shadow:0 0 0 .5px rgba(0,0,0,.15)}
+
+.nb-draw-pop{position:fixed;z-index:210;width:232px;padding:13px;border-radius:14px;border:1px solid #e5e5ea;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.16);display:none}
+.nb-draw-pop--open{display:block}
+.nb-draw-pop--style{left:58px;top:50%;transform:translateY(-50%)}
+.nb-draw-pop-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.nb-draw-pop-label{font-size:11px;font-weight:600;color:#3a3a3c;margin-bottom:7px}
+.nb-draw-pop-value{font-size:11px;color:#aeaeb2;font-variant-numeric:tabular-nums}
+.nb-draw-pop-note{margin-top:10px;font-size:10px;color:#aeaeb2}
+.nb-draw-swatches{display:flex;gap:6px;margin-bottom:12px}
+.nb-draw-swatch{width:24px;height:24px;border-radius:50%;border:1px solid #e5e5ea;cursor:pointer;padding:0;transition:transform .12s}
+.nb-draw-swatch:hover{transform:scale(1.12)}
+.nb-draw-swatch--active{outline:2px solid #6366f1;outline-offset:2px}
+.nb-draw-widths{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.nb-draw-width{display:flex;align-items:center;justify-content:center;height:36px;border:1.5px solid #e5e5ea;border-radius:10px;background:#fff;cursor:pointer}
+.nb-draw-width:hover{background:#f9f9fb}
+.nb-draw-width--active{border-color:#a5b4fc;background:#eef2ff}
+.nb-draw-width span{display:block;width:38px;border-radius:99px;background:#3a3a3c}
+.nb-draw-range{width:100%;accent-color:#007aff}
