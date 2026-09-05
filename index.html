@@ -18,6 +18,8 @@ header{background:#fff;border-bottom:1px solid #e5e5ea;padding:14px 24px;display
 .filter-btn{padding:5px 14px;border:1.5px solid #e5e5ea;border-radius:20px;background:#fff;font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}
 .filter-btn.active{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
 .last-sync{font-size:11px;color:#c7c7cc}
+.nav-link{padding:5px 14px;border:1.5px solid #d6e6ff;border-radius:20px;background:#fff;font-size:12px;font-weight:500;color:#007aff;text-decoration:none;white-space:nowrap;transition:background .15s}
+.nav-link:hover{background:#f0f7ff}
 
 /* ── Grid ── */
 main{padding:20px 24px;max-width:1440px;margin:0 auto}
@@ -219,6 +221,7 @@ main{padding:20px 24px;max-width:1440px;margin:0 auto}
     <button class="filter-btn" onclick="setFilter('短片',this)">短片</button>
     <button class="filter-btn" onclick="setFilter('婚攝',this)">婚攝</button>
     <button class="filter-btn" onclick="setFilter('教學',this)">教學</button>
+    <a class="nav-link" href="notes.html" title="靈感筆記板">📝 筆記</a>
     <span class="last-sync" id="lastSync"></span>
     <button class="filter-btn select-btn" id="selectBtn" title="選取多支製作 Moodboard" onclick="toggleSelectMode()">📋 選取</button>
     <button class="trash-btn" title="垃圾桶" onclick="openTrash()">🗑<span class="trash-badge" id="trashBadge"></span></button>
