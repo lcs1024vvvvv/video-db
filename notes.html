@@ -39,6 +39,7 @@
   <button class="nb-tool" type="button" data-type="todo">☑︎ 待辦清單</button>
   <button class="nb-tool" type="button" data-type="mindmap">🕸 心智圖</button>
   <button class="nb-tool nb-tool--board" type="button" data-type="board">🗂 Board</button>
+  <button class="nb-tool nb-tool--sb" type="button" data-type="storyboard">🎞 分鏡</button>
 </div>
 
 <div class="nb-banner" id="banner">
@@ -57,11 +58,18 @@
 
 <!-- 卡片右鍵選單：換色與字級 -->
 <div class="nb-ctx" id="ctxMenu">
+  <div class="nb-ctx-actions" id="ctxActions" hidden></div>
   <div class="nb-ctx-label">顏色</div>
   <div class="nb-swatches" id="ctxSwatches"></div>
   <div class="nb-ctx-label">字級</div>
   <div class="nb-sizes" id="ctxSizes"></div>
 </div>
+
+<!-- 分鏡：看大圖 -->
+<div class="nb-lightbox" id="sbLightbox"><img id="sbLightboxImg" alt=""></div>
+
+<!-- 選圖用的隱形 input，卡片與放大視窗共用 -->
+<input type="file" id="sbFileInput" accept="image/*" multiple hidden>
 
 <!-- 同步衝突：不自動合併，讓使用者挑一邊 -->
 <div class="nb-overlay" id="conflictOverlay">
@@ -76,6 +84,7 @@
 </div>
 
 <script src="gh.js"></script>
+<script src="storyboard-store.js"></script>
 <script src="notes.js"></script>
 </body>
 </html>
