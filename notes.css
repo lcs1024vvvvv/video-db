@@ -191,3 +191,104 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .nb-draw-width--active{border-color:#a5b4fc;background:#eef2ff}
 .nb-draw-width span{display:block;width:38px;border-radius:99px;background:#3a3a3c}
 .nb-draw-range{width:100%;accent-color:#007aff}
+
+/* ── 分鏡卡片 ── */
+.nb-tool--sb{border-color:#cfd8e6;background:#f7f9fd;color:#3b5478}
+.nb-tool--sb:hover{background:#eef3fb}
+.nb-body--sb{padding:0;overflow:hidden}
+.nb-sb{display:flex;flex-direction:row;height:100%;min-height:0}
+/* 左側拖曳把手：平常隱形，滑過卡片才浮現，指到它本身才實心 */
+.nb-sb-handle{flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:grab;
+  width:calc(20px * var(--sb-scale,1));font-size:calc(15px * var(--sb-scale,1));line-height:1;
+  color:#8e8e93;user-select:none;opacity:0;transition:opacity .18s}
+.nb-sb-handle:active{cursor:grabbing}
+.nb-card--sb:hover .nb-sb-handle{opacity:.45}
+.nb-sb-handle:hover{opacity:1}
+.nb-sb--dropping{outline:2.5px dashed #007aff;outline-offset:-4px;background:rgba(0,122,255,.05)}
+/* --sb-scale 由 JS 依卡片寬度算出（見 applySbScale）。格子最小寬、間距、內距
+   全部乘上它，所以拉大卡片＝格子等比變大，而不是一排擠進更多格。 */
+.nb-card--sb{--sb-scale:1}
+.nb-sb-grid{flex:1;min-height:0;overflow:auto;display:grid;align-content:start;
+  padding:calc(9px * var(--sb-scale,1));
+  gap:calc(9px * var(--sb-scale,1));
+  grid-template-columns:repeat(auto-fill,minmax(calc(132px * var(--sb-scale,1)),1fr))}
+.nb-sb-grid .nb-shot-note{min-height:calc(44px * var(--sb-scale,1))}
+/* 接在最後一格後面的「＋」空框 */
+.nb-shot-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  border:1.5px dashed #c7c7cc;border-radius:9px;background:transparent;cursor:pointer;font-family:inherit;
+  color:#aeaeb2;min-height:104px;padding:10px;transition:border-color .15s,color .15s,background .15s}
+.nb-shot-add:hover{border-color:#007aff;color:#007aff;background:rgba(0,122,255,.05)}
+.nb-shot-add-plus{font-size:22px;line-height:1}
+.nb-shot-add-text{font-size:10px;line-height:1.5;text-align:center}
+
+.nb-shot{border:1px solid rgba(0,0,0,.09);border-radius:9px;overflow:hidden;background:#fff}
+.nb-shot--dragging{opacity:.4}
+.nb-shot-hd{display:flex;align-items:center;gap:4px;padding:3px 5px;background:#fafafc;border-bottom:1px solid rgba(0,0,0,.06);cursor:grab;min-height:24px}
+.nb-shot-hd:active{cursor:grabbing}
+.nb-shot-hd--confirm{background:#ffe5e3;border-bottom-color:#ffc9c4}
+.nb-shot-no{font-size:10px;font-weight:700;white-space:nowrap}
+.nb-shot-len{width:46px;border:1px solid #e5e5ea;border-radius:5px;padding:1px 4px;font-size:10px;font-weight:700;font-family:inherit;outline:none;text-align:center;color:#c2410c;background:#fff}
+.nb-shot-len:focus{border-color:#007aff}
+.nb-shot-len::placeholder{color:#d1d1d6;font-weight:400}
+.nb-shot-del{width:17px;height:17px;border:none;background:transparent;border-radius:4px;color:#c7c7cc;cursor:pointer;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nb-shot-del:hover{background:#ffe5e3;color:#ff3b30}
+.nb-shot-img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#111;cursor:zoom-in}
+.nb-shot-note{width:100%;border:none;border-top:1px solid rgba(0,0,0,.06);padding:5px 7px;font-size:11px;line-height:1.5;font-family:inherit;resize:none;min-height:44px;outline:none;background:#fff}
+.nb-shot-note:focus{background:#fbfdff}
+.nb-shot-note::placeholder{color:#d1d1d6}
+
+
+/* 看大圖 */
+.nb-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9700;display:none;align-items:center;justify-content:center;padding:32px;cursor:zoom-out}
+.nb-lightbox--open{display:flex}
+.nb-lightbox img{max-width:100%;max-height:100%;border-radius:8px}
+
+/* ── 透明卡片：浮動式 ── */
+/* 分鏡卡片設成透明時，畫面上只留下鏡頭格子本身，其餘（外框、標題列、
+   「N 格／＋圖片／放大」那條）全部不存在。因此那些入口改到別處：
+   拖動＝拖格子以外的空白處；放大＝雙擊空白處或右鍵；刪除＝右鍵。 */
+.nb-card--ghost{background:transparent!important;box-shadow:none;border-color:transparent!important}
+.nb-card--ghost.nb-card--sb .nb-hd{display:none}
+.nb-card--ghost .nb-ta,
+.nb-card--ghost .nb-body{background:transparent}
+
+/* 非分鏡的卡片（便條紙、心智圖…）設成透明時仍保留標題列，
+   否則它們就完全沒有地方可以拖動或刪除了；只是改成滑過才浮現。 */
+.nb-card--ghost:not(.nb-card--sb) .nb-hd{opacity:0;background:transparent;border-bottom-color:transparent;transition:opacity .18s}
+.nb-card--ghost:not(.nb-card--sb):hover .nb-hd{opacity:1;background:rgba(255,255,255,.72);border-bottom-color:rgba(0,0,0,.08);backdrop-filter:blur(3px);border-radius:9px}
+
+/* 唯一的「放大」方式就是右下角這個把手，所以 hover 時要夠明顯 */
+.nb-card--ghost .nb-rz{opacity:0;transition:opacity .18s}
+.nb-card--ghost:hover .nb-rz{opacity:.75}
+
+/* 「＋」縮成小號誌貼在最後一格旁邊：平常全透明，滑過卡片才半透明，指到它才實心 */
+.nb-card--ghost .nb-shot-add{border:none;background:transparent;justify-self:start;align-self:center;
+  width:calc(42px * var(--sb-scale,1));height:calc(42px * var(--sb-scale,1));
+  min-height:0;padding:0;border-radius:11px;opacity:0;transition:opacity .18s,background .15s}
+.nb-card--ghost:hover .nb-shot-add{opacity:.45}
+.nb-card--ghost .nb-shot-add:hover{opacity:1;background:rgba(0,0,0,.06)}
+.nb-card--ghost .nb-shot-add-text{display:none}
+.nb-card--ghost .nb-shot-add-plus{font-size:calc(23px * var(--sb-scale,1))}
+
+/* 一格都沒有時「＋」必須看得見，否則整張卡片憑空消失就再也找不到了 */
+.nb-card--ghost .nb-shot-add--first{opacity:.8;width:auto;height:auto;
+  min-height:calc(104px * var(--sb-scale,1));
+  justify-self:stretch;align-self:stretch;padding:10px;border:1.5px dashed #c7c7cc}
+.nb-card--ghost .nb-shot-add--first .nb-shot-add-text{display:block}
+
+/* 鏡頭格子維持白底，不然備註文字會直接壓在畫布上看不清楚 */
+.nb-card--ghost .nb-shot{box-shadow:0 1px 8px rgba(0,0,0,.13)}
+
+/* 右鍵選單裡的卡片動作 */
+.nb-ctx-actions{display:flex;flex-direction:column;gap:3px;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid #f0f0f2}
+.nb-ctx-action{border:none;background:transparent;border-radius:7px;padding:6px 8px;font-size:11px;font-weight:600;
+  font-family:inherit;color:#3a3a3c;text-align:left;cursor:pointer;white-space:nowrap}
+.nb-ctx-action:hover{background:#f2f2f7}
+.nb-ctx-action--danger{color:#ff3b30}
+.nb-ctx-action--danger:hover{background:#ffe5e3}
+
+/* 色盤裡的「透明」用棋盤格表示 */
+.nb-swatch[data-hex="transparent"]{
+  background-image:linear-gradient(45deg,#d1d1d6 25%,transparent 25%,transparent 75%,#d1d1d6 75%),
+                   linear-gradient(45deg,#d1d1d6 25%,#fff 25%,#fff 75%,#d1d1d6 75%);
+  background-size:10px 10px;background-position:0 0,5px 5px;background-color:#fff}
