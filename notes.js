@@ -28,6 +28,7 @@
     todo: { w: 260, h: 260, color: "#FFFFFF" },
     mindmap: { w: 520, h: 360, color: "#F8FAFC" },
     board: { w: 150, h: 190, color: "#E4D39C" },
+    storyboard: { w: 560, h: 420, color: "transparent" },
   };
 
   // 心智圖節點的固定尺寸
@@ -42,6 +43,7 @@
   var HISTORY_LIMIT = 50;
 
   var COLOR_PALETTE = [
+    { hex: "transparent", label: "透明（只留內容，不擋畫布）" },
     { hex: "#FFFFFF", label: "白色" },
     { hex: "#FEF9C3", label: "黃色" },
     { hex: "#FCE7F3", label: "粉紅" },
@@ -80,6 +82,10 @@
   var svgEl = null;
   var svgMain = null;
   var svgDraft = null;
+
+  // 最後被點過的分鏡卡片。⌘V 貼圖沒有「貼到哪」的概念，靠這個決定收件人。
+  var activeSbId = null;
+  var activeSbRepaint = null;
 
   // ── DOM ─────────────────────────────────────────────────────────────────
   var $ = function (id) { return document.getElementById(id); };
@@ -385,6 +391,7 @@
       remoteTimer = null;
       pushNow({ keepalive: true });
     }
+    SB.flushAll();
   }
 
   async function pullRemote() {
@@ -1264,6 +1271,270 @@
     });
   }
 
+  // ── 分鏡卡片 ─────────────────────────────────────────────────────────────
+  /* 一張分鏡卡片＝一部片的分析。卡片本身（notes.json）只存一個 id，
+     真正的圖與註記在 storyboards/{id}.json，由 storyboard-store.js 管。
+     行為比照心智圖：卡片內就能直接編輯，需要更大空間時按「⤢」放大。 */
+
+  var sbFileTarget = null; // 隱形 file input 是共用的，記住這次要收到哪一張卡片
+
+  function pickSbFiles(sbId, repaint) {
+    sbFileTarget = { id: sbId, repaint: repaint };
+    $("sbFileInput").click();
+  }
+
+  async function importIntoSb(sbId, files, repaint) {
+    var added = await SB.importFiles(sbId, files, function (done, total) {
+      setStatus("處理圖片… " + done + "/" + total);
+    });
+    if (added) {
+      repaint();
+      setStatus("已加入 " + added + " 格");
+    }
+  }
+
+  function openSbLightbox(src) {
+    $("sbLightboxImg").src = src;
+    $("sbLightbox").classList.add("nb-lightbox--open");
+  }
+
+  function closeSbLightbox() {
+    $("sbLightbox").classList.remove("nb-lightbox--open");
+    $("sbLightboxImg").src = "";
+  }
+
+  /** 把某份分鏡畫進一個容器。inline 卡片與放大視窗共用這一支。 */
+  function paintShotGrid(grid, sbId, repaint) {
+    var doc = SB.cached(sbId);
+    grid.textContent = "";
+    if (!doc) return;
+
+    doc.shots.forEach(function (shot, position) {
+      grid.appendChild(shotCell(shot, position, sbId, grid, repaint));
+    });
+    grid.appendChild(addCell(sbId, repaint, doc.shots.length === 0));
+  }
+
+  /** 接在最後一格後面的空框，點下去就加圖。空的時候順便當提示。 */
+  function addCell(sbId, repaint, isEmpty) {
+    var cell = document.createElement("button");
+    cell.type = "button";
+    // 空的時候多一個 --first：透明卡片在沒 hover 時會把「＋」也藏起來，
+    // 但一格都沒有的話整張卡片就等於消失了，所以第一格永遠留著
+    cell.className = "nb-shot-add" + (isEmpty ? " nb-shot-add--first" : "");
+
+    var plus = document.createElement("span");
+    plus.className = "nb-shot-add-plus";
+    plus.textContent = "＋";
+
+    var text = document.createElement("span");
+    text.className = "nb-shot-add-text";
+    text.textContent = isEmpty ? "拖圖進來、⌘V 貼上，或點這裡" : "加入";
+
+    cell.appendChild(plus);
+    cell.appendChild(text);
+    cell.addEventListener("pointerdown", function (event) { event.stopPropagation(); });
+    cell.addEventListener("click", function () { pickSbFiles(sbId, repaint); });
+    return cell;
+  }
+
+  function shotCell(shot, position, sbId, grid, repaint) {
+    var cell = document.createElement("div");
+    cell.className = "nb-shot";
+    cell.dataset.shotId = shot.id;
+
+    var header = document.createElement("div");
+    header.className = "nb-shot-hd";
+
+    var label = document.createElement("span");
+    label.className = "nb-shot-no";
+    label.textContent = "鏡頭" + (position + 1);
+
+    var len = document.createElement("input");
+    len.type = "text";
+    len.className = "nb-shot-len";
+    len.value = shot.len;
+    len.placeholder = "長度";
+    len.addEventListener("input", function () { shot.len = len.value; SB.save(sbId); });
+    len.addEventListener("pointerdown", function (event) { event.stopPropagation(); });
+
+    var gap = document.createElement("span");
+    gap.style.flex = "1";
+
+    var remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "nb-shot-del";
+    remove.textContent = "✕";
+    remove.title = "刪除這一格";
+    remove.addEventListener("pointerdown", function (event) { event.stopPropagation(); });
+    remove.addEventListener("click", function () {
+      confirmShotDelete(header, shot, sbId, repaint);
+    });
+
+    header.appendChild(label);
+    header.appendChild(len);
+    header.appendChild(gap);
+    header.appendChild(remove);
+    header.addEventListener("pointerdown", function (event) {
+      startShotReorder(event, cell, grid, sbId, repaint);
+    });
+
+    var image = document.createElement("img");
+    image.className = "nb-shot-img";
+    image.src = shot.img;
+    image.alt = "鏡頭" + (position + 1);
+    image.draggable = false;
+    image.addEventListener("click", function () { openSbLightbox(shot.img); });
+
+    var note = document.createElement("textarea");
+    note.className = "nb-shot-note";
+    note.value = shot.note;
+    note.placeholder = "備註…";
+    note.addEventListener("input", function () { shot.note = note.value; SB.save(sbId); });
+
+    cell.appendChild(header);
+    cell.appendChild(image);
+    cell.appendChild(note);
+    return cell;
+  }
+
+  function confirmShotDelete(header, shot, sbId, repaint) {
+    var original = Array.prototype.slice.call(header.childNodes);
+    header.textContent = "";
+    header.classList.add("nb-shot-hd--confirm");
+
+    var text = document.createElement("span");
+    text.className = "nb-confirm-text";
+    text.textContent = "刪掉這格？";
+
+    var yes = document.createElement("button");
+    yes.type = "button";
+    yes.className = "nb-confirm-btn nb-confirm-btn--yes";
+    yes.textContent = "刪除";
+    yes.addEventListener("pointerdown", function (event) { event.stopPropagation(); });
+    yes.addEventListener("click", function () {
+      var doc = SB.cached(sbId);
+      doc.shots = doc.shots.filter(function (entry) { return entry.id !== shot.id; });
+      SB.save(sbId);
+      repaint();
+    });
+
+    var no = document.createElement("button");
+    no.type = "button";
+    no.className = "nb-confirm-btn nb-confirm-btn--no";
+    no.textContent = "取消";
+    no.addEventListener("pointerdown", function (event) { event.stopPropagation(); });
+    no.addEventListener("click", function () {
+      header.textContent = "";
+      header.classList.remove("nb-shot-hd--confirm");
+      original.forEach(function (node) { header.appendChild(node); });
+    });
+
+    header.appendChild(text);
+    header.appendChild(yes);
+    header.appendChild(no);
+  }
+
+  /* 重排用 pointer 事件而非 HTML5 drag-and-drop：後者在 iOS Safari 觸控完全
+     不觸發，手機上等於排不了序。拖曳中只搬 DOM 節點（不重繪，免得每次交換
+     都要重新解碼幾十張圖），放開才依 DOM 順序回寫並重畫一次補正編號。 */
+  function startShotReorder(event, cell, grid, sbId, repaint) {
+    if (event.button !== 0) return;
+    if (event.target.closest("input, textarea, button")) return;
+    event.preventDefault();
+    event.stopPropagation(); // 別讓卡片本身跟著被拖走
+
+    var startX = event.clientX;
+    var startY = event.clientY;
+    var moved = false;
+
+    function onMove(moveEvent) {
+      if (!moved) {
+        if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) < 5) return;
+        moved = true;
+        cell.classList.add("nb-shot--dragging");
+        cell.style.pointerEvents = "none"; // 讓 elementFromPoint 看得到底下那格
+      }
+      var under = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+      var target = under && under.closest ? under.closest(".nb-shot") : null;
+      if (!target || target === cell || target.parentElement !== grid) return;
+      var cells = Array.prototype.slice.call(grid.children);
+      var forward = cells.indexOf(cell) < cells.indexOf(target);
+      grid.insertBefore(cell, forward ? target.nextSibling : target);
+    }
+
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      cell.classList.remove("nb-shot--dragging");
+      cell.style.pointerEvents = "";
+      if (!moved) return;
+
+      // 「＋」空框也在 grid.children 裡，但它沒有 shotId，要濾掉
+      var order = Array.prototype.filter.call(grid.children, function (node) { return node.dataset.shotId; })
+        .map(function (node) { return node.dataset.shotId; });
+      var doc = SB.cached(sbId);
+      doc.shots.sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
+      SB.save(sbId);
+      repaint();
+    }
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  function renderStoryboard(body, item) {
+    var sbId = item.content;
+    body.textContent = "";
+
+    var wrap = document.createElement("div");
+    wrap.className = "nb-sb";
+
+    /* 格子排滿時卡片內就沒有空白處可抓了，所以左側固定放一根拖曳把手，
+       抓它可以把整張卡片（所有格子）一起搬走。 */
+    var handle = document.createElement("div");
+    handle.className = "nb-sb-handle";
+    handle.textContent = "⠿";
+    handle.title = "拖動整張卡片";
+    handle.addEventListener("pointerdown", function (event) { startDrag(event, item); });
+
+    var grid = document.createElement("div");
+    grid.className = "nb-sb-grid";
+
+    wrap.appendChild(handle);
+    wrap.appendChild(grid);
+    body.appendChild(wrap);
+
+    function repaint() {
+      paintShotGrid(grid, sbId, repaint);
+    }
+
+    // 點過這張卡片之後，⌘V 就會貼到這一份
+    wrap.addEventListener("pointerdown", function (event) {
+      activeSbId = sbId;
+      activeSbRepaint = repaint;
+      // 標題列已經拿掉，改成「點格子以外的空白處」就能拖動整張卡片
+      if (event.target === wrap || event.target === grid) startDrag(event, item);
+    });
+
+    // 直接把圖拖到卡片上
+    wrap.addEventListener("dragover", function (event) {
+      if (Array.prototype.indexOf.call(event.dataTransfer.types, "Files") === -1) return;
+      event.preventDefault();
+      wrap.classList.add("nb-sb--dropping");
+    });
+    wrap.addEventListener("dragleave", function () { wrap.classList.remove("nb-sb--dropping"); });
+    wrap.addEventListener("drop", function (event) {
+      wrap.classList.remove("nb-sb--dropping");
+      if (!event.dataTransfer.files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      importIntoSb(sbId, event.dataTransfer.files, repaint);
+    });
+
+    SB.load(sbId, repaint).then(repaint);
+  }
+
   // ── 心智圖 ───────────────────────────────────────────────────────────────
   function parseMindMap(content) {
     try {
@@ -1471,13 +1742,29 @@
     el.style.height = item.h + "px";
     el.style.zIndex = String(item.zIndex);
     el.style.background = item.color;
+    applyGhost(el, item);
+  }
+
+  /** 透明卡片：背景之外，邊框與陰影也要一起收掉，不然還是看得到一個框。 */
+  function applyGhost(el, item) {
+    el.classList.toggle("nb-card--ghost", item.color === "transparent");
+    applySbScale(el, item);
+  }
+
+  /* 分鏡卡片拉大時，格子與間距要一起等比放大（而不是一排塞更多格）。
+     做法是把「卡片寬度 ÷ 預設寬度」當成縮放比寫進 CSS 變數，
+     格子的最小寬、間距、內距都乘上它，auto-fill 的欄數自然維持不變。 */
+  function applySbScale(el, item) {
+    if (item.type !== "storyboard") return;
+    var scale = clamp(item.w / TYPE_DEFAULTS.storyboard.w, 0.6, 3);
+    el.style.setProperty("--sb-scale", scale.toFixed(3));
   }
 
   function createCard(item) {
     if (item.type === "board") return createBoardCard(item);
 
     var card = document.createElement("div");
-    card.className = "nb-card";
+    card.className = "nb-card" + (item.type === "storyboard" ? " nb-card--sb" : "");
     card.dataset.id = item.id;
     applyGeometry(card, item);
 
@@ -1556,6 +1843,9 @@
     } else if (item.type === "mindmap") {
       body.classList.add("nb-body--mm");
       renderMindMap(body, item);
+    } else if (item.type === "storyboard") {
+      body.classList.add("nb-body--sb");
+      renderStoryboard(body, item);
     } else {
       var textarea = document.createElement("textarea");
       textarea.className = "nb-ta";
@@ -1818,6 +2108,7 @@
       item.h = clamp(originH + (moveEvent.clientY - startY), MIN_H, CANVAS_H - item.y);
       card.style.width = item.w + "px";
       card.style.height = item.h + "px";
+      applySbScale(card, item);
     }
 
     function onUp() {
@@ -1838,7 +2129,7 @@
       button.type = "button";
       button.className = "nb-swatch";
       button.dataset.hex = entry.hex;
-      button.style.background = entry.hex;
+      if (entry.hex !== "transparent") button.style.background = entry.hex;
       button.title = entry.label;
       button.addEventListener("click", function () {
         var item = findItem(ctxItemId);
@@ -1848,6 +2139,7 @@
         // Board 卡片的底色在裡面那塊磁磚上，外層是透明的
         var painted = el && (item.type === "board" ? el.querySelector(".nb-board-tile") : el);
         if (painted) painted.style.background = entry.hex;
+        if (el) applyGhost(el, item);
         markDirty();
         syncContextMenuActive(item);
       });
@@ -1882,8 +2174,28 @@
     });
   }
 
+  /* 分鏡卡片沒有標題列，放大與刪除只剩右鍵這個入口，一定要有。 */
+  function buildCtxActions(item) {
+    var box = $("ctxActions");
+    box.textContent = "";
+    box.hidden = item.type !== "storyboard";
+    if (box.hidden) return;
+
+    [
+      { text: "✕ 刪除這張卡片", danger: true, onClick: function () { closeContextMenu(); deleteItem(item); } },
+    ].forEach(function (entry) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "nb-ctx-action" + (entry.danger ? " nb-ctx-action--danger" : "");
+      button.textContent = entry.text;
+      button.addEventListener("click", entry.onClick);
+      box.appendChild(button);
+    });
+  }
+
   function openContextMenu(event, item) {
     ctxItemId = item.id;
+    buildCtxActions(item);
     syncContextMenuActive(item);
     ctxEl.classList.add("nb-ctx--open");
     // 先顯示才量得到尺寸，然後夾住不要超出視窗
@@ -1907,6 +2219,8 @@
 
   // ── 新增與刪除 ────────────────────────────────────────────────────────────
   function initialContent(type) {
+    // 分鏡跟 Board 一樣，content 存的是另一份資料的 id，不是內容本身
+    if (type === "storyboard") return SB.create();
     if (type === "todo") return JSON.stringify([{ id: uid(), done: false, text: "" }]);
     if (type === "mindmap") return JSON.stringify([{ id: "root", text: "主題", x: 30, y: 140, parentId: null }]);
     return "";
@@ -1957,6 +2271,10 @@
   }
 
   function deleteItem(item) {
+    if (item.type === "storyboard") {
+      SB.remove(item.content);
+      if (activeSbId === item.content) { activeSbId = null; activeSbRepaint = null; }
+    }
     if (item.type === "board") {
       var doomed = boardSubtree(item.content);
       state.items = state.items.filter(function (entry) { return doomed.indexOf(entry.boardId) === -1; });
@@ -2097,6 +2415,23 @@
     buildDrawToolbar();
     buildContextMenu();
 
+    // ── 分鏡卡片相關 ──
+    SB.onStatus = setStatus;
+    $("sbFileInput").addEventListener("change", function (event) {
+      if (sbFileTarget) importIntoSb(sbFileTarget.id, event.target.files, sbFileTarget.repaint);
+      event.target.value = "";
+    });
+    $("sbLightbox").addEventListener("click", closeSbLightbox);
+
+    // ⌘V 貼圖：貼進最後點過的那張分鏡卡片（在輸入框裡則維持正常貼字）
+    document.addEventListener("paste", function (event) {
+      if (!activeSbId || !event.clipboardData || !event.clipboardData.files.length) return;
+      var target = event.target;
+      if (target && target.matches && target.matches("input, textarea")) return;
+      event.preventDefault();
+      importIntoSb(activeSbId, event.clipboardData.files, activeSbRepaint);
+    });
+
     state = loadLocal() || emptyState();
     renderAll();
     scrollToContent();
@@ -2134,6 +2469,7 @@
       var typing = target && target.matches && target.matches("input, textarea, select, [contenteditable='true']");
 
       if (event.key === "Escape") {
+        closeSbLightbox();
         closeContextMenu();
         closeSettings();
         closeConflictDialog();
